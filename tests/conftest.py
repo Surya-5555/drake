@@ -15,9 +15,10 @@ Fixture design principles:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncGenerator
 
 import pytest
+import httpx
 import yaml
 
 # ---------------------------------------------------------------------------
@@ -100,3 +101,12 @@ def real_spec_path() -> Path:
     if not REAL_SPEC_PATH.exists():
         pytest.skip(f"Real spec not found at {REAL_SPEC_PATH} — skipping integration test.")
     return REAL_SPEC_PATH
+
+
+@pytest.fixture
+async def mock_api_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+    """
+    Async fixture to test HTTPX calls against the local Stoplight Prism mock server.
+    """
+    async with httpx.AsyncClient(base_url="http://localhost:4010") as client:
+        yield client

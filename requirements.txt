@@ -1,0 +1,25 @@
+# ==============================================================================
+# DELL MCP Workflow Proxy - Core Requirements
+# ==============================================================================
+
+# --- MCP Server Framework ---
+fastmcp>=3.4.2       # Framework to build the Model Context Protocol (MCP) server endpoints
+
+# --- HTTP & API Interaction ---
+httpx>=0.28.1        # Async HTTP client used to interact with the Mock API (Stoplight Prism) and real Dell iDRACs
+
+# --- AI / LLM Integration ---
+instructor>=1.15.3   # Simplifies extracting structured JSON data from LLMs
+ollama>=0.6.2        # Python client to interact with local Ollama LLMs
+
+# --- API Validation & Schema Enforcement ---
+openapi-core>=0.23.1 # Used to validate API requests and responses against the OpenAPI spec
+pydantic>=2.13.4     # Provides data validation and settings management using Python type hints
+
+# ==============================================================================
+# Development & Testing Requirements (Uncomment for local development)
+# ==============================================================================
+# black>=26.5.1      # Strict code formatter
+# flake8>=7.3.0      # Style guide enforcement (linter)
+# mypy>=2.1.0        # Static type checker for Python
+# pytest>=9.1.0      # Testing framework for running mock API and execution tests

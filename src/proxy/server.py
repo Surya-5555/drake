@@ -151,3 +151,29 @@ async def get_proxy_status() -> Dict[str, Any]:
         "mapping_path": MAPPING_PATH,
         "executor_configured": os.getenv("DELL_EXECUTOR_TYPE", "httpx"),
     }
+
+
+@mcp.tool()
+async def preview_workflow_steps(workflow_id: str) -> Dict[str, Any]:
+    """
+    Acts as a 'Blast Radius Audit' tool.
+    
+    Satisfies strict enterprise compliance by allowing human admins to review 
+    API execution paths and simulate the exact granular API calls it is about 
+    to make before any potentially destructive actions occur.
+    
+    Args:
+        workflow_id (str): The unique identifier of the workflow to preview.
+        
+    Returns:
+        Dict[str, Any]: A simulated list of granular API calls for the requested workflow.
+    """
+    workflow_data = workflows.get(workflow_id)
+    if not workflow_data:
+        return {"error": f"Workflow '{workflow_id}' not found."}
+    
+    return {
+        "workflow_id": workflow_id,
+        "name": workflow_data.get("name", workflow_id),
+        "simulated_api_calls": workflow_data.get("steps", [])
+    }

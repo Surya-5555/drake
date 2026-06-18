@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  prism-mock:
+    image: stoplight/prism:5
+    command: mock -h 0.0.0.0 --multiprocess=false /api/mini_openapi.yaml
+    volumes:
+      - ./tests/fixtures/mini_openapi.yaml:/api/mini_openapi.yaml:ro
+    ports:
+      - "4010:4010"
