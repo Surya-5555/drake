@@ -39,6 +39,7 @@ Settings are read from environment variables in `ai_cluster/config/settings.py`:
 
 - `OLLAMA_MODEL`, default `llama3`
 - `OLLAMA_TIMEOUT`, default `120`
+- `OLLAMA_MAX_RETRIES`, default `2`
 - `OUTPUT_PATH`, default `ai_cluster/output/workflow_mapping.json`
 - `LOG_LEVEL`, default `INFO`
 
@@ -49,8 +50,10 @@ Settings are read from environment variables in `ai_cluster/config/settings.py`:
 3. Build a Dell enterprise infrastructure prompt.
 4. Send the prompt to local Ollama.
 5. Validate the LLM response against Contract B.
-6. Verify every endpoint belongs to exactly one workflow.
-7. Write `workflow_mapping.json`.
+6. Retry with validation feedback if the local model omits or duplicates APIs.
+7. Deterministically repair structural assignment errors after exhausted retries.
+8. Verify every endpoint belongs to exactly one workflow.
+9. Write `workflow_mapping.json`.
 
 Run:
 
@@ -104,4 +107,3 @@ pytest ai_cluster/tests
 
 The tests cover prompt generation, JSON file parsing, Contract A validation,
 Contract B schema validation, duplicate detection, and missing API detection.
-

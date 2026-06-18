@@ -18,10 +18,12 @@ class WorkflowPromptBuilder:
             endpoint.model_dump(mode="json")
             for endpoint in endpoints
         ]
+        operation_ids = [endpoint.operationId for endpoint in endpoints]
 
         schema_payload = WorkflowMapping.model_json_schema()
 
         return (
+            "You are a Dell Enterprise Infrastructure Architect.\n"
             "You are a Senior Dell Enterprise Infrastructure Architect.\n\n"
 
             "You specialize in:\n"
@@ -34,6 +36,7 @@ class WorkflowPromptBuilder:
             "Your task is to analyze enterprise API endpoints and group them into "
             "logical workflow-level operations.\n\n"
 
+            "Do not group solely by path similarity.\n"
             "Group endpoints by BUSINESS INTENT and OPERATIONAL WORKFLOW.\n"
             "Do NOT group solely by URL similarity.\n"
             "Do NOT group solely by resource names.\n"
@@ -74,7 +77,12 @@ class WorkflowPromptBuilder:
             "- Verify no new operationIds were invented.\n"
             "- Verify every workflow contains at least one API.\n\n"
 
+            "Required operationId checklist. These exact strings must each "
+            "appear once and only once in underlying_api_calls:\n"
+            f"{json.dumps(operation_ids, indent=2)}\n\n"
+
             "Return ONLY valid JSON.\n"
+            "Return only JSON matching the supplied schema.\n"
             "Do NOT return markdown.\n"
             "Do NOT return explanations.\n"
             "Do NOT return conversational text.\n\n"

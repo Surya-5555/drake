@@ -3,43 +3,56 @@
     {
       "workflow_name": "server_health_monitoring",
       "required_params": [
-        "server_id"
+        "ComputerSystemId"
       ],
       "underlying_api_calls": [
-        "getThermal",
-        "getPower"
+        "GET_/redfish/v1",
+        "GET_/redfish/v1/Systems/{ComputerSystemId}"
       ],
       "confidence": 0.94,
       "reasoning": [
-        "shared monitoring semantics",
-        "common chassis health operations"
+        "service root and computer system status support infrastructure discovery",
+        "common health and system visibility operations"
       ]
     },
     {
       "workflow_name": "server_power_management",
       "required_params": [
-        "server_id"
+        "ComputerSystemId"
       ],
       "underlying_api_calls": [
-        "powerOnSystem"
+        "PATCH_/redfish/v1/Systems/{ComputerSystemId}",
+        "POST_/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset"
       ],
       "confidence": 0.9,
       "reasoning": [
-        "power action endpoint used for server lifecycle control"
+        "system patch and reset actions support server lifecycle control"
+      ]
+    },
+    {
+      "workflow_name": "account_access_management",
+      "required_params": [],
+      "underlying_api_calls": [
+        "GET_/redfish/v1/AccountService/Accounts",
+        "POST_/redfish/v1/AccountService/Accounts"
+      ],
+      "confidence": 0.88,
+      "reasoning": [
+        "account listing and creation belong to identity and access operations"
       ]
     },
     {
       "workflow_name": "firmware_management",
-      "required_params": [],
+      "required_params": [
+        "X-Correlation-ID"
+      ],
       "underlying_api_calls": [
-        "getFirmwareInventory",
-        "updateFirmware"
+        "POST_/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate"
       ],
       "confidence": 0.91,
       "reasoning": [
-        "firmware inventory and update operations are part of lifecycle management"
+        "simple update action triggers firmware lifecycle management"
       ]
     }
   ]
 }
-

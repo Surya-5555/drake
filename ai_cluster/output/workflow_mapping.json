@@ -4,30 +4,65 @@
       "workflow_name": "server_health_monitoring",
       "required_params": [],
       "underlying_api_calls": [
-        "getThermal",
-        "getPower"
+        "GET_/redfish/v1"
       ],
       "confidence": null,
-      "reasoning": []
-    },
-    {
-      "workflow_name": "firmware_management",
-      "required_params": [],
-      "underlying_api_calls": [
-        "getFirmwareInventory",
-        "updateFirmware"
-      ],
-      "confidence": null,
-      "reasoning": []
+      "reasoning": null
     },
     {
       "workflow_name": "server_power_management",
-      "required_params": [],
+      "required_params": [
+        "ComputerSystemId"
+      ],
       "underlying_api_calls": [
-        "powerOnSystem"
+        "GET_/redfish/v1/Systems/{ComputerSystemId}",
+        "PATCH_/redfish/v1/Systems/{ComputerSystemId}"
       ],
       "confidence": null,
-      "reasoning": []
+      "reasoning": null
+    },
+    {
+      "workflow_name": "firmware_management",
+      "required_params": [
+        "ComputerSystemId"
+      ],
+      "underlying_api_calls": [
+        "POST_/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset"
+      ],
+      "confidence": null,
+      "reasoning": null
+    },
+    {
+      "workflow_name": "inventory_reporting",
+      "required_params": [],
+      "underlying_api_calls": [
+        "GET_/redfish/v1/AccountService/Accounts"
+      ],
+      "confidence": null,
+      "reasoning": null
+    },
+    {
+      "workflow_name": "storage_management",
+      "required_params": [
+        "X-Correlation-ID"
+      ],
+      "underlying_api_calls": [
+        "POST_/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate"
+      ],
+      "confidence": null,
+      "reasoning": null
+    },
+    {
+      "workflow_name": "account_access_management",
+      "required_params": [],
+      "underlying_api_calls": [
+        "POST_/redfish/v1/AccountService/Accounts"
+      ],
+      "confidence": 0.72,
+      "reasoning": [
+        "deterministic repair after local LLM contract violation",
+        "classified by Dell operational intent from method and path"
+      ]
     }
   ]
 }

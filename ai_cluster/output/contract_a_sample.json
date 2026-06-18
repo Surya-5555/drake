@@ -1,41 +1,52 @@
 [
   {
-    "operationId": "getThermal",
+    "operationId": "GET_/redfish/v1",
     "method": "GET",
-    "url": "/redfish/v1/Chassis/{server_id}/Thermal",
-    "required_params": [
-      "server_id"
-    ]
-  },
-  {
-    "operationId": "getPower",
-    "method": "GET",
-    "url": "/redfish/v1/Chassis/{server_id}/Power",
-    "required_params": [
-      "server_id"
-    ]
-  },
-  {
-    "operationId": "powerOnSystem",
-    "method": "POST",
-    "url": "/redfish/v1/Systems/{server_id}/Actions/ComputerSystem.Reset",
-    "required_params": [
-      "server_id"
-    ]
-  },
-  {
-    "operationId": "getFirmwareInventory",
-    "method": "GET",
-    "url": "/redfish/v1/UpdateService/FirmwareInventory",
+    "url": "/redfish/v1",
     "required_params": []
   },
   {
-    "operationId": "updateFirmware",
+    "operationId": "GET_/redfish/v1/Systems/{ComputerSystemId}",
+    "method": "GET",
+    "url": "/redfish/v1/Systems/{ComputerSystemId}",
+    "required_params": [
+      "ComputerSystemId"
+    ]
+  },
+  {
+    "operationId": "PATCH_/redfish/v1/Systems/{ComputerSystemId}",
+    "method": "PATCH",
+    "url": "/redfish/v1/Systems/{ComputerSystemId}",
+    "required_params": [
+      "ComputerSystemId"
+    ]
+  },
+  {
+    "operationId": "POST_/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset",
+    "method": "POST",
+    "url": "/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset",
+    "required_params": [
+      "ComputerSystemId"
+    ]
+  },
+  {
+    "operationId": "GET_/redfish/v1/AccountService/Accounts",
+    "method": "GET",
+    "url": "/redfish/v1/AccountService/Accounts",
+    "required_params": []
+  },
+  {
+    "operationId": "POST_/redfish/v1/AccountService/Accounts",
+    "method": "POST",
+    "url": "/redfish/v1/AccountService/Accounts",
+    "required_params": []
+  },
+  {
+    "operationId": "POST_/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
     "method": "POST",
     "url": "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
     "required_params": [
-      "image_uri"
+      "X-Correlation-ID"
     ]
   }
 ]
-
