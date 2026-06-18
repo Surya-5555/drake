@@ -1,8 +1,6 @@
 # AI Workflow Discovery Engine
 
-Person 3 module for the Dell Hackathon project **Enterprise MCP Workflow Proxy**.
-It converts Person 2's Contract A endpoint list into Person 1's Contract B
-`workflow_mapping.json`.
+Clustering and discovery module for the **Enterprise MCP Workflow Proxy**. It analyzes and groups OpenAPI endpoints (Contract A) into high-level, production-grade workflows (Contract B) to generate the `workflow_mapping.json` routing configuration.
 
 This module enforces 100% local execution for air-gapped Dell data centers, completely eliminating the risk of cloud data exfiltration or hallucinated execution.
 

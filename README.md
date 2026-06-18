@@ -4,7 +4,7 @@ An air-gapped, edge-native, deterministic translation layer. This system ingests
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 The system design strictly separates ingest/clustering compile-time phases from the deterministic runtime translation execution:
 
@@ -32,7 +32,7 @@ flowchart TD
 
 ---
 
-## 📁 Project Directory Scaffolding
+## Project Directory Scaffolding
 
 ```
 dell_mcp_proxy/
@@ -69,7 +69,7 @@ dell_mcp_proxy/
 
 ---
 
-## 🛠️ Technical Stack & Dependencies
+## Technical Stack & Dependencies
 
 - **Language**: Python 3.10+
 - **Dependency & Environment Manager**: `uv`
@@ -87,7 +87,7 @@ dell_mcp_proxy/
 
 ---
 
-## 🚀 Getting Started & Local Setup
+## Getting Started & Local Setup
 
 ### 1. Prerequisites
 Ensure you have Python 3.10+ and `uv` installed. If you do not have `uv`, install it via:
@@ -126,7 +126,7 @@ fastmcp dev src/proxy/server.py
 
 ---
 
-## 🧪 Testing & Mock API Setup (Add-on)
+## Testing & Mock API Setup (Add-on)
 
 To safely test destructive Dell workflows locally without breaking real hardware, we utilize a **Stoplight Prism Docker container** that mocks the realistic Dell iDRAC OpenAPI schema.
 
@@ -151,7 +151,7 @@ Before executing workflows against real systems, you can use the MCP tool `previ
 
 ---
 
-## 🛡️ Code Quality & Verification Commands
+## Code Quality & Verification Commands
 
 All files conform to strict enterprise quality checks. Verify your changes using:
 
@@ -171,7 +171,7 @@ uv run pytest
 
 ---
 
-## 🔌 The Executor Contract (`BaseExecutor`)
+## The Executor Contract (BaseExecutor)
 
 To ensure clean hot-swapping between testing frameworks and production environments, the system abstracts execution behind `src/proxy/executors/base.py`.
 
