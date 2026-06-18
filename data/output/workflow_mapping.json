@@ -1,0 +1,47 @@
+{
+  "workflows": {
+    "server_health_check": {
+      "name": "server_health_check",
+      "description": "Query hardware status, power logs, and health summaries of a server.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "get_system_details",
+          "method": "GET",
+          "path": "/redfish/v1/Systems/System.Embedded.1",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "get_power_status",
+          "method": "GET",
+          "path": "/redfish/v1/Chassis/System.Embedded.1/Power",
+          "params": {}
+        }
+      ]
+    },
+    "firmware_update_workflow": {
+      "name": "firmware_update_workflow",
+      "description": "Stages a firmware image and triggers update actions.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "get_firmware_inventory",
+          "method": "GET",
+          "path": "/redfish/v1/UpdateService/FirmwareInventory",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "trigger_update",
+          "method": "POST",
+          "path": "/redfish/v1/UpdateService/Actions/SimpleUpdate",
+          "params": {
+            "ImageURI": "{image_uri}",
+            "TransferProtocol": "HTTP"
+          }
+        }
+      ]
+    }
+  }
+}

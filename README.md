@@ -108,6 +108,22 @@ Copy the template variables file:
 cp .env.example .env
 ```
 
+### 4. Running & Listing Tools
+Activate the virtual environment:
+```bash
+source .venv/bin/activate
+```
+
+List the registered workflow tools on the MCP server:
+```bash
+fastmcp list src/proxy/server.py
+```
+
+Run the FastMCP development console to test tools in your browser:
+```bash
+fastmcp dev src/proxy/server.py
+```
+
 ---
 
 ## 🛡️ Code Quality & Verification Commands
