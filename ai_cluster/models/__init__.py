@@ -1,0 +1,2 @@
+"""Input contract models."""
+

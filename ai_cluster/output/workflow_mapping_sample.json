@@ -1,0 +1,45 @@
+{
+  "workflows": [
+    {
+      "workflow_name": "server_health_monitoring",
+      "required_params": [
+        "server_id"
+      ],
+      "underlying_api_calls": [
+        "getThermal",
+        "getPower"
+      ],
+      "confidence": 0.94,
+      "reasoning": [
+        "shared monitoring semantics",
+        "common chassis health operations"
+      ]
+    },
+    {
+      "workflow_name": "server_power_management",
+      "required_params": [
+        "server_id"
+      ],
+      "underlying_api_calls": [
+        "powerOnSystem"
+      ],
+      "confidence": 0.9,
+      "reasoning": [
+        "power action endpoint used for server lifecycle control"
+      ]
+    },
+    {
+      "workflow_name": "firmware_management",
+      "required_params": [],
+      "underlying_api_calls": [
+        "getFirmwareInventory",
+        "updateFirmware"
+      ],
+      "confidence": 0.91,
+      "reasoning": [
+        "firmware inventory and update operations are part of lifecycle management"
+      ]
+    }
+  ]
+}
+

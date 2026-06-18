@@ -1,0 +1,33 @@
+{
+  "workflows": [
+    {
+      "workflow_name": "server_health_monitoring",
+      "required_params": [],
+      "underlying_api_calls": [
+        "getThermal",
+        "getPower"
+      ],
+      "confidence": null,
+      "reasoning": []
+    },
+    {
+      "workflow_name": "firmware_management",
+      "required_params": [],
+      "underlying_api_calls": [
+        "getFirmwareInventory",
+        "updateFirmware"
+      ],
+      "confidence": null,
+      "reasoning": []
+    },
+    {
+      "workflow_name": "server_power_management",
+      "required_params": [],
+      "underlying_api_calls": [
+        "powerOnSystem"
+      ],
+      "confidence": null,
+      "reasoning": []
+    }
+  ]
+}

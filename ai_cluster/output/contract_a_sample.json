@@ -1,0 +1,41 @@
+[
+  {
+    "operationId": "getThermal",
+    "method": "GET",
+    "url": "/redfish/v1/Chassis/{server_id}/Thermal",
+    "required_params": [
+      "server_id"
+    ]
+  },
+  {
+    "operationId": "getPower",
+    "method": "GET",
+    "url": "/redfish/v1/Chassis/{server_id}/Power",
+    "required_params": [
+      "server_id"
+    ]
+  },
+  {
+    "operationId": "powerOnSystem",
+    "method": "POST",
+    "url": "/redfish/v1/Systems/{server_id}/Actions/ComputerSystem.Reset",
+    "required_params": [
+      "server_id"
+    ]
+  },
+  {
+    "operationId": "getFirmwareInventory",
+    "method": "GET",
+    "url": "/redfish/v1/UpdateService/FirmwareInventory",
+    "required_params": []
+  },
+  {
+    "operationId": "updateFirmware",
+    "method": "POST",
+    "url": "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
+    "required_params": [
+      "image_uri"
+    ]
+  }
+]
+
