@@ -126,6 +126,31 @@ fastmcp dev src/proxy/server.py
 
 ---
 
+## 🧪 Testing & Mock API Setup (Add-on)
+
+To safely test destructive Dell workflows locally without breaking real hardware, we utilize a **Stoplight Prism Docker container** that mocks the realistic Dell iDRAC OpenAPI schema.
+
+### 1. Start the Mock Server
+Ensure Docker is running, then boot the mock API (which dynamically exposes realistic Dell endpoints on port `4010`):
+```bash
+docker-compose up -d --build
+```
+*Note: The `docker-compose.yml` mounts the realistic schema located at `tests/fixtures/mini_openapi.yaml`.*
+
+### 2. Automated Testing Pipeline
+We have provided an all-in-one automation script to sync dependencies, restart the mock server, verify health, run the `pytest` test suite, and execute code linting. 
+
+To run the complete test pipeline:
+```bash
+chmod +x test_all.sh
+./test_all.sh
+```
+
+### 3. Blast Radius Audit
+Before executing workflows against real systems, you can use the MCP tool `preview_workflow_steps(workflow_id)`. This acts as an enterprise compliance gate, returning a simulated list of the exact granular API calls the proxy is about to execute so that admins can review them safely.
+
+---
+
 ## 🛡️ Code Quality & Verification Commands
 
 All files conform to strict enterprise quality checks. Verify your changes using:
