@@ -100,7 +100,11 @@ class OpenAPIParser:
                     method=method.upper(),
                     url=path,
                     required_params=required_params,
-                    tags=operation.get("tags", []),
+                    tags=(
+                        operation.get("tags", [])
+                        if isinstance(operation.get("tags"), list)
+                        else ([operation.get("tags")] if operation.get("tags") is not None else [])
+                    ),
                     summary=operation.get("summary", ""),
                     description=operation.get("description", ""),
                     request_schema=request_schema,
