@@ -13,6 +13,9 @@ dependencies = [
     "fastapi>=0.110.0",
     "uvicorn>=0.30.0",
     "networkx>=3.0",
+    "tenacity>=9.1.4",
+    "sqlalchemy>=2.0.51",
+    "aiosqlite>=0.22.1",
 ]
 
 [dependency-groups]

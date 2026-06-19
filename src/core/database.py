@@ -7,6 +7,8 @@ Provides standard database schema initialization and query layers for:
   - Clustered workflows (Contract B) and approval status
   - Governance audit logs
   - Pipeline stages execution status
+
+Includes a modern async SQLAlchemy layer for runtime proxy management.
 """
 
 from __future__ import annotations
@@ -16,6 +18,15 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import Column, String, Integer, ForeignKey
+
+# ===========================================================================
+# Synchronous Database Persistence (Legacy & Admin Dashboards)
+# ===========================================================================
+
 
 # File path resolved relative to project root
 DB_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "governance.db"
@@ -29,7 +40,7 @@ def get_db_connection() -> sqlite3.Connection:
     return conn
 
 
-def init_db() -> None:
+def init_db_sync() -> None:
     """Initialize SQLite tables for governance and audit trails if they don't exist."""
     with get_db_connection() as conn:
         # 1. Pipeline status tracking
@@ -274,3 +285,52 @@ def get_workflows(approved_only: bool = False, pending_only: bool = False) -> Li
                 }
             )
         return results
+
+
+# ===========================================================================
+# Asynchronous Database & ORM Management (SQLAlchemy)
+# ===========================================================================
+
+# Ensure output path directory exists
+ASYNC_DB_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "output"
+ASYNC_DB_DIR.mkdir(parents=True, exist_ok=True)
+ASYNC_DB_URL = f"sqlite+aiosqlite:///{ASYNC_DB_DIR}/mcp_proxy.db"
+
+engine = create_async_engine(ASYNC_DB_URL, echo=False)
+async_session = async_sessionmaker(engine, expire_on_commit=False)
+Base = declarative_base()
+
+
+class Workflow(Base):
+    """
+    SQLAlchemy model representing a workflow cluster.
+    """
+    __tablename__ = "workflows"
+
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
+    risk_level = Column(String)
+    status = Column(String, default="pending")  # 'pending', 'approved', 'rejected'
+
+    steps = relationship("EndpointStep", back_populates="workflow", cascade="all, delete-orphan")
+
+
+class EndpointStep(Base):
+    """
+    SQLAlchemy model representing a specific API endpoint/step inside a workflow.
+    """
+    __tablename__ = "endpoint_steps"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    workflow_id = Column(String, ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False)
+    method = Column(String, nullable=False)
+    path = Column(String, nullable=False)
+
+    workflow = relationship("Workflow", back_populates="steps")
+
+
+async def init_db() -> None:
+    """Initialize database tables asynchronously if they do not exist."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
