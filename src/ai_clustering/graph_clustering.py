@@ -44,8 +44,12 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
         G.add_node(ep["operation_id"], **ep)
 
     service = EmbeddingService()
-    embeddings = service.generate_embeddings(endpoints)
-    sim_matrix = service.compute_similarity_matrix(embeddings)
+    try:
+        embeddings = service.generate_embeddings(endpoints)
+        sim_matrix = service.compute_similarity_matrix(embeddings)
+    except Exception as err:
+        logger.warning(f"EmbeddingService failed (missing dependencies?): {err}. Falling back to 0.0 semantic scores.")
+        sim_matrix = np.zeros((len(endpoints), len(endpoints)))
 
     def compute_path_similarity(url_a: str, url_b: str) -> float:
         parts_a = [p for p in url_a.split("/") if p]
@@ -78,7 +82,7 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
 
     for i in range(num_nodes):
         op_id_i = endpoints[i]["operation_id"]
-        tags_i = endpoints[i].get("tags", [])
+        tags_i = endpoints[i].get("tags") or []
         if isinstance(tags_i, str):
             tags_i = [tags_i]
         url_i = endpoints[i].get("url", "")
@@ -92,7 +96,7 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
                 
             semantic_score = float(sim_matrix[i][j])
             
-            tags_j = endpoints[j].get("tags", [])
+            tags_j = endpoints[j].get("tags") or []
             if isinstance(tags_j, str):
                 tags_j = [tags_j]
             tag_score = compute_tag_similarity(tags_i, tags_j)
