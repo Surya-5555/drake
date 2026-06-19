@@ -35,7 +35,7 @@ FIXTURES_DIR = TESTS_DIR / "fixtures"
 MINI_SPEC_PATH = FIXTURES_DIR / "mini_openapi.yaml"
 
 #: Absolute path to the real Dell iDRAC spec (skipped if absent)
-REAL_SPEC_PATH = Path("/Users/sreejesh/Downloads/openapi-7.xx.yaml")
+REAL_SPEC_PATH = TESTS_DIR.parent / "data" / "raw_specs" / "openapi-7.xx.yaml"
 
 
 # ---------------------------------------------------------------------------
