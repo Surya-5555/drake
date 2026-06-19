@@ -68,6 +68,8 @@ def test_workflow_lifecycle_and_reload():
         assert len(pending_list) >= 2
         assert any(wf["id"] == "test_wf_1" for wf in pending_list)
         assert any(wf["id"] == "test_wf_2" for wf in pending_list)
+        for wf in pending_list:
+            assert "underlyingEndpoints" in wf
 
         # 2. Approve test_wf_1 via REST endpoint
         response = client.post(

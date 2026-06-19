@@ -188,22 +188,56 @@ async def get_pending_workflows() -> List[Dict[str, Any]]:
                 "SELECT * FROM workflows WHERE approved = 0"
             ) as cursor:
                 rows = await cursor.fetchall()
-                return [
+            
+            async with db.execute("SELECT * FROM endpoints") as cursor:
+                endpoints_rows = await cursor.fetchall()
+
+            from collections import defaultdict
+            community_to_endpoints = defaultdict(list)
+            for ep in endpoints_rows:
+                if ep["community_id"]:
+                    community_to_endpoints[ep["community_id"]].append(
+                        {
+                            "operationId": ep["operation_id"],
+                            "method": ep["method"],
+                            "url": ep["url"],
+                            "path": ep["url"],
+                        }
+                    )
+
+            results = []
+            for r in rows:
+                wf_id = r["id"]
+                comm_id = r["community_id"] or wf_id
+                underlying = community_to_endpoints[comm_id]
+                if not underlying:
+                    underlying = [
+                        {
+                            "operationId": ep["operation_id"],
+                            "method": ep["method"],
+                            "url": ep["url"],
+                            "path": ep["url"],
+                        }
+                        for ep in endpoints_rows
+                        if ep["operation_id"] == wf_id
+                    ]
+                results.append(
                     {
-                        "id": r["id"],
+                        "id": wf_id,
                         "systemName": r["system_name"],
                         "displayName": r["display_name"],
                         "workflowName": r["display_name"],
                         "riskLevel": r["risk_level"],
-                        "clusterSize": r["cluster_size"],
+                        "clusterSize": len(underlying) or r["cluster_size"],
                         "confidence": r["confidence"],
                         "generatedDescription": r["generated_description"],
                         "approved": r["approved"],
                         "rejectionReason": r["rejection_reason"],
-                        "communityId": r["community_id"],
+                        "communityId": comm_id,
+                        "underlyingEndpoints": underlying,
                     }
-                    for r in rows
-                ]
+                )
+            return results
     except Exception as err:
         logger.error(f"Pending workflows failed: {err}")
         raise HTTPException(status_code=500, detail=str(err))
@@ -307,6 +341,39 @@ async def update_workflow(
                 status_code=404, detail="Workflow not found after update"
             )
 
+        comm_id = updated_wf["community_id"] or workflow_id
+        async with db.execute(
+            "SELECT * FROM endpoints WHERE community_id = ? ORDER BY operation_id",
+            (comm_id,),
+        ) as c:
+            eps = await c.fetchall()
+
+        underlying = [
+            {
+                "operationId": ep["operation_id"],
+                "method": ep["method"],
+                "url": ep["url"],
+                "path": ep["url"],
+            }
+            for ep in eps
+        ]
+
+        if not underlying:
+            async with db.execute(
+                "SELECT * FROM endpoints WHERE operation_id = ?",
+                (workflow_id,),
+            ) as c:
+                eps = await c.fetchall()
+            underlying = [
+                {
+                    "operationId": ep["operation_id"],
+                    "method": ep["method"],
+                    "url": ep["url"],
+                    "path": ep["url"],
+                }
+                for ep in eps
+            ]
+
     await log_audit_event_async(
         "workflow_updated",
         "success",
@@ -323,12 +390,13 @@ async def update_workflow(
         "displayName": updated_wf["display_name"],
         "workflowName": updated_wf["display_name"],
         "riskLevel": updated_wf["risk_level"],
-        "clusterSize": updated_wf["cluster_size"],
+        "clusterSize": len(underlying) or updated_wf["cluster_size"],
         "confidence": updated_wf["confidence"],
         "generatedDescription": updated_wf["generated_description"],
         "approved": updated_wf["approved"],
         "rejectionReason": updated_wf["rejection_reason"],
         "communityId": updated_wf["community_id"],
+        "underlyingEndpoints": underlying,
     }
 
 
