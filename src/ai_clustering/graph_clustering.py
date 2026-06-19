@@ -29,60 +29,105 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
     Constructs a NetworkX graph from a list of Contract A endpoints.
     
     Nodes represent individual OpenAPI endpoints.
-    Edges are created and weighted based on shared base paths, parameters, and resources.
+    Edges are created using semantic embedding similarity (Hybrid Threshold + Top-K).
     """
+    from src.ai_clustering.embedding_service import EmbeddingService
+    import numpy as np
+
     G = nx.Graph()
+
+    if not endpoints:
+        return G
 
     # Add all endpoints as nodes
     for ep in endpoints:
         G.add_node(ep["operation_id"], **ep)
 
-    # Compile list of nodes
-    nodes = list(G.nodes(data=True))
+    service = EmbeddingService()
+    embeddings = service.generate_embeddings(endpoints)
+    sim_matrix = service.compute_similarity_matrix(embeddings)
 
-    def get_base_path(path: str) -> str:
-        """Extract the first 3 segments of a path to group by resource prefix."""
-        parts = [p for p in path.split("/") if p and not p.startswith("{")]
-        return "/" + "/".join(parts[:3])
+    def compute_path_similarity(url_a: str, url_b: str) -> float:
+        parts_a = [p for p in url_a.split("/") if p]
+        parts_b = [p for p in url_b.split("/") if p]
+        if not parts_a and not parts_b:
+            return 1.0
+        if not parts_a or not parts_b:
+            return 0.0
+        shared = 0
+        for a, b in zip(parts_a, parts_b):
+            if a == b:
+                shared += 1
+            else:
+                break
+        return float(shared) / max(len(parts_a), len(parts_b))
 
-    # Connect nodes based on relationship heuristics
-    for i in range(len(nodes)):
-        id_i, data_i = nodes[i]
-        path_i = data_i["url"]
-        base_i = get_base_path(path_i)
-        params_i = set(data_i["required_params"])
+    def compute_tag_similarity(tags_a: List[str], tags_b: List[str]) -> float:
+        set_a = set(tags_a)
+        set_b = set(tags_b)
+        if not set_a or not set_b:
+            return 0.0
+        union = len(set_a.union(set_b))
+        return float(len(set_a.intersection(set_b))) / union if union > 0 else 0.0
 
-        for j in range(i + 1, len(nodes)):
-            id_j, data_j = nodes[j]
-            path_j = data_j["url"]
-            base_j = get_base_path(path_j)
-            params_j = set(data_j["required_params"])
+    # Hybrid Threshold + Top-K for edges
+    # For each node, find the top 10 most similar nodes (excluding self) with similarity > 0.50
+    k = 10
+    threshold = 0.50
+    num_nodes = len(endpoints)
 
-            weight = 0.0
+    for i in range(num_nodes):
+        op_id_i = endpoints[i]["operation_id"]
+        tags_i = endpoints[i].get("tags", [])
+        if isinstance(tags_i, str):
+            tags_i = [tags_i]
+        url_i = endpoints[i].get("url", "")
+        
+        final_weights = np.zeros(num_nodes)
+        
+        for j in range(num_nodes):
+            if i == j:
+                final_weights[j] = 0.0
+                continue
+                
+            semantic_score = float(sim_matrix[i][j])
+            
+            tags_j = endpoints[j].get("tags", [])
+            if isinstance(tags_j, str):
+                tags_j = [tags_j]
+            tag_score = compute_tag_similarity(tags_i, tags_j)
+            
+            url_j = endpoints[j].get("url", "")
+            path_score = compute_path_similarity(url_i, url_j)
+            
+            final_weight = (semantic_score * 0.6) + (tag_score * 0.25) + (path_score * 0.15)
+            final_weights[j] = final_weight
+            
+        # Get indices of top k elements
+        if num_nodes - 1 < k:
+            top_k_indices = np.argsort(final_weights)[::-1]
+        else:
+            top_k_indices = np.argpartition(final_weights, -k)[-k:]
+            # Sort the top k indices
+            top_k_indices = top_k_indices[np.argsort(final_weights[top_k_indices])][::-1]
 
-            # 1. Share exact base resource path
-            if base_i == base_j and base_i != "/":
-                weight += 4.0
-
-            # 2. Share path parameter signatures
-            shared_params = params_i.intersection(params_j)
-            if shared_params:
-                weight += len(shared_params) * 1.5
-
-            # 3. Method dependency (e.g. GET and PATCH on same path)
-            if path_i == path_j:
-                weight += 5.0
-
-            # If they have a relationship, add the edge
-            if weight > 0:
-                G.add_edge(id_i, id_j, weight=weight)
+        for j in top_k_indices:
+            weight = final_weights[j]
+            if weight > threshold:
+                op_id_j = endpoints[j]["operation_id"]
+                # networkx Graph is undirected, so adding (i, j) or (j, i) is the same.
+                if not G.has_edge(op_id_i, op_id_j):
+                    G.add_edge(op_id_i, op_id_j, weight=float(weight))
+                else:
+                    # Keep the max weight if there's asymmetry
+                    G[op_id_i][op_id_j]["weight"] = max(G[op_id_i][op_id_j]["weight"], float(weight))
 
     return G
 
 
 def detect_communities(G: nx.Graph) -> List[Set[str]]:
     """
-    Groups endpoints into community clusters using NetworkX community detection.
+    Groups endpoints into community clusters using Leiden community detection.
     Falls back to single-node communities if no edges are present.
     """
     # Check if we have edges to cluster
@@ -90,14 +135,38 @@ def detect_communities(G: nx.Graph) -> List[Set[str]]:
         return [{node} for node in G.nodes()]
 
     try:
-        from networkx.algorithms.community import label_propagation_communities
-        communities = list(label_propagation_communities(G))
-    except Exception as err:
-        logger.warning(f"Label propagation failed: {err}. Using modularity optimization.")
-        from networkx.algorithms.community import greedy_modularity_communities
-        communities = [set(c) for c in greedy_modularity_communities(G)]
-
-    return communities
+        import igraph as ig
+        import leidenalg
+        
+        # Convert NetworkX to igraph
+        nodes = list(G.nodes())
+        node_indices = {n: i for i, n in enumerate(nodes)}
+        
+        edges = [(node_indices[u], node_indices[v]) for u, v in G.edges()]
+        weights = [data.get('weight', 1.0) for u, v, data in G.edges(data=True)]
+        
+        g_ig = ig.Graph(n=len(nodes), edges=edges, directed=False)
+        g_ig.es['weight'] = weights
+        
+        # Run Leiden algorithm
+        partition = leidenalg.find_partition(
+            g_ig, 
+            leidenalg.ModularityVertexPartition,
+            weights='weight',
+            n_iterations=-1,
+            seed=42 # for determinism
+        )
+        
+        # Map back to original node IDs
+        communities = []
+        for comm in partition:
+            communities.append(set(nodes[i] for i in comm))
+            
+        return communities
+    except ImportError as err:
+        logger.error(f"Failed to import igraph/leidenalg: {err}. Please install dependencies.")
+        # Fallback to single node communities if ML packages are missing
+        return [{node} for node in G.nodes()]
 
 
 def check_ollama_status() -> bool:
@@ -162,40 +231,39 @@ def generate_semantic_label(
     # 3. LLM semantic labeling (if requested and online)
     if use_llm and check_ollama_status():
         try:
-            client = ollama.Client()
+            from ai_cluster.services.ollama_service import OllamaService
+            service = OllamaService()
+            
             endpoint_summaries = "\n".join(
                 [f"- {ep['method']} {ep['url']} ({ep['operation_id']})" for ep in endpoints]
             )
+            op_ids = [ep['operation_id'] for ep in endpoints]
             
             prompt = f"""
             You are a Dell Enterprise IT Architect.
-            Name and describe an automation workflow that clusters these iDRAC API endpoints:
+            Create a single workflow that groups these iDRAC API endpoints:
             {endpoint_summaries}
             
-            Format response as JSON with keys:
-            - workflow_name: snake_case identifier (e.g. system_inventory_workflow)
-            - generated_description: clear business description (maximum 2 sentences)
-            
-            Do not include explanations or markdown outside JSON.
+            You MUST return a JSON object containing a 'workflows' array with exactly one item.
+            Set 'workflow_name' to a descriptive snake_case identifier.
+            Set 'underlying_api_calls' to exactly these operation IDs: {op_ids}
+            Set 'reasoning' to a single-item array containing a clear business description (maximum 2 sentences).
             """
             
-            response = client.chat(
-                model="llama3",
-                messages=[{"role": "user", "content": prompt}],
-                format={"type": "object", "properties": {"workflow_name": {"type": "string"}, "generated_description": {"type": "string"}}, "required": ["workflow_name", "generated_description"]},
-                options={"temperature": 0.0}
-            )
+            data = service.generate_workflow_mapping(prompt)
             
-            import json
-            data = json.loads(response["message"]["content"])
-            name = data.get("workflow_name", heuristic_name)
-            desc = data.get("generated_description", heuristic_desc)
-            
-            # Enforce snake_case for workflow name
-            if not re.match(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$", name):
-                name = heuristic_name
+            workflows = data.get("workflows", [])
+            if workflows:
+                wf = workflows[0]
+                name = wf.get("workflow_name", heuristic_name)
+                reasoning = wf.get("reasoning", [])
+                desc = reasoning[0] if reasoning else heuristic_desc
                 
-            return name, desc, 0.95
+                # Enforce snake_case for workflow name
+                if not re.match(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$", name):
+                    name = heuristic_name
+                    
+                return name, desc, 0.95
         except Exception as err:
             logger.warning(f"Ollama labeling failed: {err}. Falling back to heuristics.")
 
@@ -206,11 +274,15 @@ def run_pipeline(contract_a_data: ContractA) -> None:
     """
     Executes the compile-time discovery pipeline:
       1. Save raw endpoints to SQLite.
-      2. Construct NetworkX graph.
-      3. Cluster endpoints into communities.
-      4. Semantically label communities.
-      5. Write discovered workflows to SQLite.
+      2. Construct NetworkX graph using Semantic Embeddings.
+      3. Cluster endpoints using Leiden algorithm.
+      4. Generate deterministic community IDs.
+      5. Semantically label communities.
+      6. Write edges and workflows to SQLite.
     """
+    import hashlib
+    from src.core.database import log_audit_event, save_endpoints, save_workflows, save_edges
+    
     log_audit_event("pipeline_started", "pending", "Ingestion and graph clustering pipeline triggered.")
     
     endpoints = []
@@ -220,35 +292,52 @@ def run_pipeline(contract_a_data: ContractA) -> None:
             "method": ep.method,
             "url": ep.url,
             "required_params": [p.name for p in ep.required_params],
+            "tags": ep.tags,
+            "summary": ep.summary,
+            "description": ep.description,
+            "request_schema": ep.request_schema,
+            "response_schema": ep.response_schema,
         })
 
-    # Save to database
+    # Save to database initially
     save_endpoints(endpoints)
 
     # Build Graph
     G = build_relationship_graph(endpoints)
     
+    # Extract edges to save
+    edges_list = []
+    for u, v, data in G.edges(data=True):
+        edges_list.append({
+            "source": u,
+            "target": v,
+            "weight": data.get("weight", 1.0)
+        })
+    save_edges(edges_list)
+    
     # Detect communities
     communities = detect_communities(G)
     
-    # Update endpoints in DB with community IDs
+    # Update endpoints in DB with deterministic MD5 community IDs
     updated_endpoints = []
-    for idx, comm in enumerate(communities):
-        comm_id = str(idx + 1)
-        for op_id in comm:
+    workflows_list = []
+    
+    for comm in communities:
+        # Sort operation_ids to ensure deterministic hashing
+        sorted_ops = sorted(list(comm))
+        comm_hash = hashlib.md5("".join(sorted_ops).encode('utf-8')).hexdigest()[:8]
+        comm_id = f"c_{comm_hash}"
+        
+        comm_endpoints = []
+        for op_id in sorted_ops:
             for ep in endpoints:
                 if ep["operation_id"] == op_id:
                     ep["community_id"] = comm_id
                     updated_endpoints.append(ep)
+                    comm_endpoints.append(ep)
+                    break
                     
-    save_endpoints(updated_endpoints)
-
-    # Discover and label workflows
-    workflows_list = []
-    for idx, comm in enumerate(communities):
-        comm_id = str(idx + 1)
-        comm_endpoints = [ep for ep in updated_endpoints if ep["community_id"] == comm_id]
-        
+        # Discover and label workflows
         workflow_id = f"wf_{comm_id}"
         wf_name, wf_desc, confidence = generate_semantic_label(workflow_id, comm_endpoints)
         
@@ -273,6 +362,7 @@ def run_pipeline(contract_a_data: ContractA) -> None:
             "community_id": comm_id,
         })
 
+    save_endpoints(updated_endpoints)
     save_workflows(workflows_list)
     log_audit_event(
         "workflow_generated",

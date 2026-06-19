@@ -13,6 +13,10 @@ dependencies = [
     "fastapi>=0.110.0",
     "uvicorn>=0.30.0",
     "networkx>=3.0",
+    "sentence-transformers>=3.0.0",
+    "scikit-learn>=1.5.0",
+    "leidenalg>=0.10.2",
+    "igraph>=0.11.0",
 ]
 
 [dependency-groups]

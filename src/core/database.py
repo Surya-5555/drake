@@ -55,6 +55,17 @@ def init_db() -> None:
             """
         )
 
+        # 2b. Graph Edges
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS edges (
+                source TEXT NOT NULL,
+                target TEXT NOT NULL,
+                weight REAL NOT NULL
+            )
+            """
+        )
+
         # 3. Discovered workflow clusters
         conn.execute(
             """
@@ -153,6 +164,28 @@ def save_endpoints(endpoints_list: List[Dict[str, Any]]) -> None:
                 ),
             )
         conn.commit()
+
+
+def save_edges(edges_list: List[Dict[str, Any]]) -> None:
+    """Bulk save derived graph edges, clearing old ones."""
+    with get_db_connection() as conn:
+        conn.execute("DELETE FROM edges")
+        for edge in edges_list:
+            conn.execute(
+                """
+                INSERT INTO edges (source, target, weight)
+                VALUES (?, ?, ?)
+                """,
+                (edge["source"], edge["target"], edge["weight"]),
+            )
+        conn.commit()
+
+
+def get_edges() -> List[Dict[str, Any]]:
+    """Retrieve all graph edges."""
+    with get_db_connection() as conn:
+        cursor = conn.execute("SELECT * FROM edges")
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_all_endpoints() -> List[Dict[str, Any]]:

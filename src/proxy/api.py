@@ -18,7 +18,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from src.ai_clustering.graph_clustering import build_relationship_graph
+
 from src.core.database import (
     get_all_endpoints,
     get_db_connection,
@@ -235,11 +235,13 @@ async def reload_mcp() -> Dict[str, str]:
 async def get_graph() -> Dict[str, Any]:
     """Generate React Flow graph topology representing endpoints, relationships, and clusters."""
     try:
+        from src.core.database import get_edges
+        
         endpoints = get_all_endpoints()
         workflows = get_workflows()
 
-        # Build NetworkX graph to extract edges
-        G = build_relationship_graph(endpoints)
+        # Read edges directly from SQLite instead of rebuilding the graph at runtime
+        db_edges = get_edges()
 
         # Format Nodes
         nodes = []
@@ -253,11 +255,11 @@ async def get_graph() -> Dict[str, Any]:
 
         # Format Edges
         edges = []
-        for idx, (source, target) in enumerate(G.edges()):
+        for idx, edge in enumerate(db_edges):
             edges.append({
                 "id": f"edge_{idx}",
-                "source": source,
-                "target": target,
+                "source": edge["source"],
+                "target": edge["target"],
             })
 
         # Format Communities
