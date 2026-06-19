@@ -22,8 +22,13 @@ else
 fi
 
 echo "🐳 2. Restarting Mock API Server with latest OpenAPI specs..."
-docker-compose down
-docker-compose up -d --build
+if command -v docker-compose &> /dev/null; then
+    docker-compose down
+    docker-compose up -d --build
+else
+    docker compose down
+    docker compose up -d --build
+fi
 
 echo "⏳ Waiting for Prism server to boot..."
 sleep 3
@@ -34,7 +39,7 @@ CURL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4010/redfi
 if [ "$CURL_STATUS" != "200" ]; then
     echo "❌ Mock server failed to respond with 200 OK (Got: $CURL_STATUS)."
     echo "Fetching Docker logs for debugging:"
-    docker logs dell_mcp_prism-mock_1
+    docker logs dell_mcp-prism-mock-1 || docker logs dell_mcp_prism-mock_1 || true
     exit 1
 fi
 echo "✅ Mock server is healthy!"

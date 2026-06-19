@@ -1,34 +1,35 @@
 # Dell Enterprise MCP Workflow Proxy
 
-An air-gapped, edge-native, deterministic translation layer. This system ingests 500+ raw Dell OpenAPI endpoints, clusters them into 20 high-level workflows using a local offline LLM, and executes them deterministically at runtime via FastMCP and HTTPX.
+An air-gapped, edge-native, deterministic translation layer. This system ingests 500+ raw Dell OpenAPI endpoints, clusters them into high-level workflows using a local offline LLM, and executes them deterministically at runtime via a FastAPI + FastMCP ASGI microservice backed by SQLite and SQLAlchemy.
 
 ---
 
 ## Architecture Overview
 
-The system design strictly separates ingest/clustering compile-time phases from the deterministic runtime translation execution:
+The system design separates ingest/clustering compile-time phases from the stateful runtime translation execution:
 
 ```mermaid
 flowchart TD
     subgraph Compile-Time Phases
         A[Raw OpenAPI Specs] -->|Phase 1: Ingestion| B[OpenAPI Parser]
         B -->|OpenAPI schemas| C[AI Clustering Engine]
-        C -->|Local Ollama/Instructor| D[(Workflow Mappings JSON)]
+        C -->|Local Ollama/Instructor| D[(SQLite governance.db)]
     end
     subgraph Runtime Execution
-        E[MCP Clients] -->|MCP Protocol| F[FastMCP Server]
-        D -->|Deterministic Routes| F
-        F -->|Select Executor| G[BaseExecutor Interface]
-        G -->|Hot-Swapped| H[HTTPX Executor]
-        G -->|Hot-Swapped| I[Dell OM SDK / Redfish API]
+        E[MCP Clients] <-->|SSE /mcp| F[FastAPI ASGI Server]
+        G[(SQLite mcp_proxy.db)] <-->|SQLAlchemy Async| F
+        F -->|Select Executor| H[BaseExecutor Interface]
+        H -->|MockHTTPXExecutor| I[Prism Mock API / Redfish Endpoint]
+        H -->|DellOMSDKExecutor| J[Real Dell Hardware]
     end
 ```
 
 ### Core Architecture Principles
 
-1. **Deterministic Execution**: All LLM clustering is done out-of-band during the compile/development phase. The runtime operates strictly deterministically using the pre-computed `workflow_mapping.json`.
-2. **Interface Segregation**: Target-system communications are decoupled from the routing and schema translation layers, enabling clean testing and production switching.
-3. **Air-gapped & Offline First**: Local parsing via `openapi-core` and offline AI clustering via `instructor` + `ollama`.
+1. **Stateful Persistence**: All workflows and API steps are stored in a SQLite database (`mcp_proxy.db`) using SQLAlchemy async models, replacing legacy static JSON configuration files.
+2. **Governance and Approvals**: Incoming clustered workflows remain `pending` until promoted to `approved` status through admin webhook REST APIs.
+3. **Dynamic Hot-Reloading**: Approved workflows are loaded dynamically as tools into FastMCP without restarting the ASGI server, and connected clients are notified in real-time.
+4. **Resilience & Fault Isolation**: Asynchronous HTTP executions employ exponential backoff retries via `tenacity` specifically targeting transient network issues.
 
 ---
 
@@ -38,29 +39,32 @@ flowchart TD
 dell_mcp_proxy/
 ├── data/
 │   ├── raw_specs/              # Downloaded raw Dell OpenAPI YAML/JSON specs
-│   └── output/                 # Generated workflow_mapping.json mapping file
+│   └── output/                 # Runtime persistence store: mcp_proxy.db
 ├── src/
 │   ├── __init__.py
 │   ├── core/                   # Shared Pydantic models, configurations, and exceptions
 │   │   ├── __init__.py
 │   │   ├── config.py
-│   │   └── exceptions.py
+│   │   ├── database.py         # SQLAlchemy schemas, engines, and async sessions
+│   │   └── exceptions.py       # Custom exceptions hierarchy (e.g. DellProxyExecutionError)
 │   ├── parser/                 # Phase 1: OpenAPI spec parsing and schema extraction
 │   │   ├── __init__.py
 │   │   └── openapi_parser.py
 │   ├── ai_clustering/          # Phase 2: Offline clustering via Instructor/Ollama LLM
 │   │   ├── __init__.py
 │   │   └── workflow_generator.py
-│   └── proxy/                  # Phase 3: FastMCP Server & Deterministic Routing
+│   └── proxy/                  # Phase 3: FastAPI + FastMCP Server & Deterministic Routing
 │       ├── __init__.py
-│       ├── server.py           # FastMCP initialization & tool registrations
+│       ├── server.py           # FastAPI server initialization, webhooks, & dynamic tool registration
 │       └── executors/          # Target execution engines
 │           ├── __init__.py
 │           ├── base.py         # BaseExecutor Abstract Base Class
-│           └── httpx_executor.py # HTTPX executor implementation
+│           └── httpx_executor.py # HTTPX executor implementation with tenacity retry loops
 ├── tests/
 │   ├── __init__.py
-│   └── conftest.py
+│   ├── conftest.py             # Pytest fixtures and mock clients
+│   ├── test_microservice.py    # Integration tests for webhooks, DB states, and reload behavior
+│   └── test_mock_api.py        # HTTP mock container validation
 ├── .env.example                # Local environment template variables
 ├── .flake8                     # Flake8 style config
 ├── pyproject.toml              # Project dependencies, packaging, and tool overrides
@@ -73,17 +77,11 @@ dell_mcp_proxy/
 
 - **Language**: Python 3.10+
 - **Dependency & Environment Manager**: `uv`
-- **Core Libraries**:
-  - `pydantic (V2)`: For structured data validation and modeling.
-  - `fastmcp`: High-performance Python framework for Model Context Protocol servers.
-  - `httpx`: Async HTTP client for mock and target communications.
-  - `openapi-core`: Strict OpenAPI parsing and validation.
-  - `instructor` & `ollama`: Structured local offline LLM interactions.
-- **Code Quality**:
-  - `black`: Strict formatting (88-char limit).
-  - `flake8`: Style guide enforcement.
-  - `mypy`: Strict type checking (`strict = true`).
-  - `pytest`: Runtime test runner.
+- **ASGI & Web Framework**: `fastapi` and `uvicorn`
+- **MCP Framework**: `fastmcp` (using ASGI/SSE transport)
+- **Database & ORM**: `sqlalchemy` (v2.0) and `aiosqlite`
+- **Resilience Engine**: `tenacity` (exponential backoff & async retries)
+- **Code Quality**: `black`, `flake8`, `mypy`, `pytest`
 
 ---
 
@@ -108,46 +106,59 @@ Copy the template variables file:
 cp .env.example .env
 ```
 
-### 4. Running & Listing Tools
-Activate the virtual environment:
+---
+
+## Running the ASGI Microservice
+
+### 1. Start the Server
+Start the Uvicorn application (which hosts both the REST endpoints and the MCP SSE interface):
 ```bash
-source .venv/bin/activate
+uv run uvicorn src.proxy.server:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-List the registered workflow tools on the MCP server:
-```bash
-fastmcp list src/proxy/server.py
-```
+### 2. REST Admin Webhooks
 
-Run the FastMCP development console to test tools in your browser:
-```bash
-fastmcp dev src/proxy/server.py
+*   **Get Pending Workflows**:
+    ```bash
+    curl -X GET http://localhost:8000/workflows/pending
+    ```
+*   **Approve a Workflow**:
+    ```bash
+    curl -X POST http://localhost:8000/workflows/{id}/approve
+    ```
+*   **Reject a Workflow**:
+    ```bash
+    curl -X POST http://localhost:8000/workflows/{id}/reject
+    ```
+*   **Trigger Hot-Reload**: Reloads the tool list from database state and notifies connected MCP clients:
+    ```bash
+    curl -X POST http://localhost:8000/reload
+    ```
+
+### 3. Connect to the MCP Server
+Clients can connect to the Model Context Protocol endpoint using SSE (Server-Sent Events) at:
+```
+http://localhost:8000/mcp
 ```
 
 ---
 
-## Testing & Mock API Setup (Add-on)
+## Testing & Mock API Setup
 
-To safely test destructive Dell workflows locally without breaking real hardware, we utilize a **Stoplight Prism Docker container** that mocks the realistic Dell iDRAC OpenAPI schema.
+To safely test workflows locally without breaking real hardware, we utilize a **Stoplight Prism Docker container** that mocks the realistic Dell iDRAC OpenAPI schema on port `4010`.
 
 ### 1. Start the Mock Server
-Ensure Docker is running, then boot the mock API (which dynamically exposes realistic Dell endpoints on port `4010`):
+Ensure Docker is running, then boot the mock API container:
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
-*Note: The `docker-compose.yml` mounts the realistic schema located at `tests/fixtures/mini_openapi.yaml`.*
 
-### 2. Automated Testing Pipeline
-We have provided an all-in-one automation script to sync dependencies, restart the mock server, verify health, run the `pytest` test suite, and execute code linting. 
-
-To run the complete test pipeline:
+### 2. Run Automated Verification Pipeline
+Execute the all-in-one automation script to sync dependencies, restart the mock server, verify health, run all `pytest` suites, and check code style:
 ```bash
 chmod +x test_all.sh
 ./test_all.sh
 ```
-
-### 3. Blast Radius Audit
-Before executing workflows against real systems, you can use the MCP tool `preview_workflow_steps(workflow_id)`. This acts as an enterprise compliance gate, returning a simulated list of the exact granular API calls the proxy is about to execute so that admins can review them safely.
 
 ---
 
@@ -168,27 +179,3 @@ uv run mypy .
 # Run Tests
 uv run pytest
 ```
-
----
-
-## The Executor Contract (BaseExecutor)
-
-To ensure clean hot-swapping between testing frameworks and production environments, the system abstracts execution behind `src/proxy/executors/base.py`.
-
-```python
-from abc import ABC, abstractmethod
-from typing import Any, Dict
-
-class BaseExecutor(ABC):
-    @abstractmethod
-    async def execute_workflow(
-        self, workflow_name: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Asynchronously execute a clustered workflow.
-        """
-        pass
-```
-
-- **HTTPXExecutor**: Used for mock API endpoints and REST verification during development.
-- **OMSDKExecutor**: Used to swap in official Dell omsdk capabilities for hardware testing.
