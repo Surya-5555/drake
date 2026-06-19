@@ -4,21 +4,21 @@ from __future__ import annotations
 
 import json
 
-from ai_cluster.models.contract_a import ApiEndpoint
+from src.core.models import EndpointContract
 from ai_cluster.schemas.workflow import WorkflowMapping
 
 
 class WorkflowPromptBuilder:
     """Build deterministic prompts for local workflow clustering."""
 
-    def build(self, endpoints: list[ApiEndpoint]) -> str:
+    def build(self, endpoints: list[EndpointContract]) -> str:
         """Build the workflow discovery prompt from validated endpoints."""
 
         endpoint_payload = [
             endpoint.model_dump(mode="json")
             for endpoint in endpoints
         ]
-        operation_ids = [endpoint.operationId for endpoint in endpoints]
+        operation_ids = [endpoint.operation_id for endpoint in endpoints]
 
         schema_payload = WorkflowMapping.model_json_schema()
 

@@ -3,6 +3,7 @@ import yaml
 import logging
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+from src.core.models import ContractA, EndpointContract, RequiredParameter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -34,15 +35,15 @@ class OpenAPIParser:
             logger.error(f"Failed to parse OpenAPI spec: {str(e)}")
             raise
 
-    def parse_and_flatten(self) -> List[Dict[str, Any]]:
+    def parse_and_flatten(self) -> ContractA:
         """
-        Flattens the OpenAPI paths into a list of endpoint dictionaries (Contract A).
-        Extracts: path, method, summary, description, tags, parameters.
+        Flattens the OpenAPI paths into a ContractA object.
+        Extracts: operation_id, path, method, summary, description, tags, required parameters, and schemas.
         """
         spec = self.load_spec()
         paths = spec.get("paths", {})
         
-        contract_a: List[Dict[str, Any]] = []
+        endpoints: List[EndpointContract] = []
 
         for path, path_item in paths.items():
             if not isinstance(path_item, dict):
@@ -64,26 +65,67 @@ class OpenAPIParser:
                 # Combine path and operation parameters
                 all_parameters = path_parameters + operation_params
 
-                endpoint_data = {
-                    "path": path,
-                    "method": method.upper(),
-                    "summary": operation.get("summary", ""),
-                    "description": operation.get("description", ""),
-                    "tags": operation.get("tags", []),
-                    "parameters": all_parameters
-                }
-                contract_a.append(endpoint_data)
+                required_params = []
+                for p in all_parameters:
+                    # Note: we only capture explicit 'required' or path params.
+                    if p.get("required") or p.get("in") == "path":
+                        param_name = p.get("name", "")
+                        param_loc = p.get("in", "query")
+                        # Validate location literal
+                        if param_loc not in ["path", "query", "header", "cookie", "body"]:
+                            param_loc = "query" # fallback
+                        required_params.append(
+                            RequiredParameter(
+                                name=param_name,
+                                location=param_loc,
+                                param_type=p.get("schema", {}).get("type", "string")
+                            )
+                        )
                 
+                # Synthesize body parameter if required
+                if operation.get("requestBody", {}).get("required"):
+                    required_params.append(
+                        RequiredParameter(
+                            name="body",
+                            location="body",
+                            param_type="object"
+                        )
+                    )
+                
+                request_schema = operation.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema")
+                response_schema = operation.get("responses", {}).get("200", {}).get("content", {}).get("application/json", {}).get("schema")
+
+                endpoint = EndpointContract(
+                    operation_id=operation.get("operationId", f"{method.upper()}_{path}"),
+                    method=method.upper(),
+                    url=path,
+                    required_params=required_params,
+                    tags=operation.get("tags", []),
+                    summary=operation.get("summary", ""),
+                    description=operation.get("description", ""),
+                    request_schema=request_schema,
+                    response_schema=response_schema
+                )
+                endpoints.append(endpoint)
+                
+        contract_a = ContractA(
+            spec_title=spec.get("info", {}).get("title", "Unknown Spec"),
+            spec_version=spec.get("info", {}).get("version", "1.0.0"),
+            openapi_version=spec.get("openapi", "3.0.0"),
+            source_file=self.file_path.name,
+            total_endpoints=len(endpoints),
+            endpoints=endpoints
+        )
         return contract_a
 
     def export_contract_a(self, output_file: str | Path = "contract_a_endpoints.json") -> None:
         """Exports the flattened endpoints to a JSON file."""
         try:
-            endpoints = self.parse_and_flatten()
+            contract_a = self.parse_and_flatten()
             output_path = Path(output_file)
             with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(endpoints, f, indent=2)
-            logger.info(f"Successfully exported {len(endpoints)} endpoints to {output_path}")
+                f.write(contract_a.model_dump_json(indent=2))
+            logger.info(f"Successfully exported {contract_a.total_endpoints} endpoints to {output_path}")
         except Exception as e:
             logger.error(f"Failed to export Contract A: {str(e)}")
             raise

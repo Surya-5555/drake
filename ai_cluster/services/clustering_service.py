@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from ai_cluster.config.settings import settings
-from ai_cluster.models.contract_a import ApiEndpoint
+from src.core.models import EndpointContract
 from ai_cluster.prompts.workflow_prompt import WorkflowPromptBuilder
 from ai_cluster.schemas.workflow import WorkflowMapping
 from ai_cluster.services.ollama_service import OllamaService
@@ -23,7 +23,7 @@ class WorkflowClusteringService:
         Prepare prompts, call the local LLM service, validate responses, and
         return the final workflow mapping.
     Inputs:
-        Validated Contract A ApiEndpoint objects.
+        Validated Contract A EndpointContract objects.
     Outputs:
         Validated WorkflowMapping object.
     """
@@ -45,7 +45,7 @@ class WorkflowClusteringService:
         self._max_retries = max_retries
         self._repair_service = repair_service or WorkflowRepairService()
 
-    def generate(self, endpoints: list[ApiEndpoint]) -> WorkflowMapping:
+    def generate(self, endpoints: list[EndpointContract]) -> WorkflowMapping:
         """Generate a validated Contract B workflow mapping."""
         if not endpoints:
             raise ValueError("Cannot cluster an empty Contract A")

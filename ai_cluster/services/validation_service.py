@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-from ai_cluster.models.contract_a import ApiEndpoint
+from src.core.models import ContractA, EndpointContract
 from ai_cluster.schemas.workflow import WorkflowMapping
 
 
@@ -24,19 +24,21 @@ class WorkflowValidationService:
         Validated models or explicit validation exceptions.
     """
 
-    def validate_contract_a(self, payload: object) -> list[ApiEndpoint]:
+    def validate_contract_a(self, payload: object) -> list[EndpointContract]:
         """Validate raw Contract A JSON into endpoint models."""
-        if not isinstance(payload, list):
-            raise WorkflowValidationError("Contract A must be a JSON array")
-        if not payload:
-            raise WorkflowValidationError("Contract A must not be empty")
+        if not isinstance(payload, dict):
+            raise WorkflowValidationError("Contract A must be a JSON object")
 
         try:
-            endpoints = [ApiEndpoint.model_validate(item) for item in payload]
+            contract_a = ContractA.model_validate(payload)
         except ValidationError as exc:
             raise WorkflowValidationError(f"Invalid Contract A: {exc}") from exc
 
-        operation_ids = [endpoint.operationId for endpoint in endpoints]
+        if not contract_a.endpoints:
+            raise WorkflowValidationError("Contract A must not be empty")
+
+        endpoints = contract_a.endpoints
+        operation_ids = [endpoint.operation_id for endpoint in endpoints]
         duplicates = self._find_duplicates(operation_ids)
         if duplicates:
             raise WorkflowValidationError(
@@ -53,13 +55,13 @@ class WorkflowValidationService:
         return mapping
 
     def validate_contract_b(
-        self, mapping: WorkflowMapping, endpoints: list[ApiEndpoint]
+        self, mapping: WorkflowMapping, endpoints: list[EndpointContract]
     ) -> WorkflowMapping:
         """Validate Contract B workflow membership against Contract A."""
         if not mapping.workflows:
             raise WorkflowValidationError("Contract B must contain workflows")
 
-        expected_ids = {endpoint.operationId for endpoint in endpoints}
+        expected_ids = {endpoint.operation_id for endpoint in endpoints}
         assigned_ids: list[str] = []
         for workflow in mapping.workflows:
             assigned_ids.extend(workflow.underlying_api_calls)

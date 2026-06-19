@@ -51,20 +51,27 @@ class RetryFakeOllamaService:
 def test_clustering_service_generates_valid_contract_b() -> None:
     validation = WorkflowValidationService()
     endpoints = validation.validate_contract_a(
-        [
-            {
-                "operationId": "getThermal",
-                "method": "GET",
-                "url": "/redfish/v1/Thermal",
-                "required_params": [],
-            },
-            {
-                "operationId": "getPower",
-                "method": "GET",
-                "url": "/redfish/v1/Power",
-                "required_params": [],
-            },
-        ]
+        {
+            "spec_title": "Test",
+            "spec_version": "1.0",
+            "openapi_version": "3.0",
+            "source_file": "test.json",
+            "total_endpoints": 2,
+            "endpoints": [
+                {
+                    "operation_id": "getThermal",
+                    "method": "GET",
+                    "url": "/redfish/v1/Thermal",
+                    "required_params": [],
+                },
+                {
+                    "operation_id": "getPower",
+                    "method": "GET",
+                    "url": "/redfish/v1/Power",
+                    "required_params": [],
+                },
+            ]
+        }
     )
 
     service = WorkflowClusteringService(
@@ -82,20 +89,27 @@ def test_clustering_service_generates_valid_contract_b() -> None:
 def test_clustering_service_retries_after_invalid_mapping() -> None:
     validation = WorkflowValidationService()
     endpoints = validation.validate_contract_a(
-        [
-            {
-                "operationId": "getThermal",
-                "method": "GET",
-                "url": "/redfish/v1/Thermal",
-                "required_params": [],
-            },
-            {
-                "operationId": "getPower",
-                "method": "GET",
-                "url": "/redfish/v1/Power",
-                "required_params": [],
-            },
-        ]
+        {
+            "spec_title": "Test",
+            "spec_version": "1.0",
+            "openapi_version": "3.0",
+            "source_file": "test.json",
+            "total_endpoints": 2,
+            "endpoints": [
+                {
+                    "operation_id": "getThermal",
+                    "method": "GET",
+                    "url": "/redfish/v1/Thermal",
+                    "required_params": [],
+                },
+                {
+                    "operation_id": "getPower",
+                    "method": "GET",
+                    "url": "/redfish/v1/Power",
+                    "required_params": [],
+                },
+            ]
+        }
     )
     fake_ollama = RetryFakeOllamaService()
     service = WorkflowClusteringService(

@@ -31,14 +31,24 @@ def _contract_a_from_openapi(path: Path) -> list[dict[str, object]]:
             ]
             endpoints.append(
                 {
-                    "operationId": operation["operationId"],
+                    "operation_id": operation["operationId"],
                     "method": method.upper(),
                     "url": url,
-                    "required_params": required_params,
+                    "required_params": [
+                        {"name": p, "location": "query", "param_type": "string"}
+                        for p in required_params
+                    ],
                 }
             )
 
-    return endpoints
+    return {
+        "spec_title": "Test",
+        "spec_version": "1.0",
+        "openapi_version": "3.0",
+        "source_file": "test.json",
+        "total_endpoints": len(endpoints),
+        "endpoints": endpoints,
+    }
 
 
 def test_mini_openapi_fixture_drives_contract_b_validation() -> None:

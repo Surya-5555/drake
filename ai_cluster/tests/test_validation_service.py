@@ -7,34 +7,42 @@ from ai_cluster.services.validation_service import (
 )
 
 
-def _contract_a() -> list[dict[str, object]]:
-    return [
-        {
-            "operationId": "getThermal",
-            "method": "GET",
-            "url": "/redfish/v1/Thermal",
-            "required_params": [],
-        },
-        {
-            "operationId": "getPower",
-            "method": "GET",
-            "url": "/redfish/v1/Power",
-            "required_params": [],
-        },
-    ]
+def _contract_a() -> dict[str, object]:
+    return {
+        "spec_title": "Test",
+        "spec_version": "1.0",
+        "openapi_version": "3.0",
+        "source_file": "test.json",
+        "total_endpoints": 2,
+        "endpoints": [
+            {
+                "operation_id": "getThermal",
+                "method": "GET",
+                "url": "/redfish/v1/Thermal",
+                "required_params": [],
+            },
+            {
+                "operation_id": "getPower",
+                "method": "GET",
+                "url": "/redfish/v1/Power",
+                "required_params": [],
+            },
+        ]
+    }
 
 
 def test_validate_contract_a() -> None:
     endpoints = WorkflowValidationService().validate_contract_a(_contract_a())
 
-    assert [endpoint.operationId for endpoint in endpoints] == [
+    assert [endpoint.operation_id for endpoint in endpoints] == [
         "getThermal",
         "getPower",
     ]
 
 
 def test_validate_contract_a_rejects_duplicates() -> None:
-    payload = _contract_a() + [_contract_a()[0]]
+    payload = _contract_a()
+    payload["endpoints"].append(payload["endpoints"][0]) # type: ignore
 
     with pytest.raises(WorkflowValidationError, match="Duplicate Contract A"):
         WorkflowValidationService().validate_contract_a(payload)

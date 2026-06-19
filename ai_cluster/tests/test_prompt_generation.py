@@ -1,11 +1,11 @@
-from ai_cluster.models.contract_a import ApiEndpoint
+from src.core.models import EndpointContract
 from ai_cluster.prompts.workflow_prompt import WorkflowPromptBuilder
 
 
 def test_prompt_contains_enterprise_architect_instructions() -> None:
     endpoints = [
-        ApiEndpoint(
-            operationId="getThermal",
+        EndpointContract(
+            operation_id="getThermal",
             method="GET",
             url="/redfish/v1/Thermal",
             required_params=[],
