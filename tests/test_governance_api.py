@@ -177,7 +177,11 @@ def test_fastapi_endpoints() -> None:
     # 2. Test Pending Workflows
     response = client.get("/api/v1/workflows/pending")
     assert response.status_code == 200
-    assert len(response.json()) == 1
+    pending_wfs = response.json()
+    assert len(pending_wfs) == 1
+    assert "underlyingEndpoints" in pending_wfs[0]
+    assert len(pending_wfs[0]["underlyingEndpoints"]) == 1
+    assert pending_wfs[0]["underlyingEndpoints"][0]["operationId"] == "GET_/redfish/v1/Systems"
 
     # 3. Test Update Workflow PATCH
     response = client.patch(
@@ -189,7 +193,10 @@ def test_fastapi_endpoints() -> None:
         headers={"X-API-Key": "default_dev_key"},
     )
     assert response.status_code == 200
-    assert response.json()["workflowName"] == "edited_systems_workflow"
+    updated_wf = response.json()
+    assert updated_wf["workflowName"] == "edited_systems_workflow"
+    assert "underlyingEndpoints" in updated_wf
+    assert len(updated_wf["underlyingEndpoints"]) == 1
 
     # 4. Test Approve Workflow POST
     response = client.post(
