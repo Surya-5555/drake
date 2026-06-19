@@ -36,21 +36,22 @@ from src.proxy.api import app
 @pytest.fixture(autouse=True)
 def setup_test_db() -> Generator[None, None, None]:
     """Sets up an isolated database for unit tests and cleans up after."""
-    # Ensure database is clean before running
-    if DB_FILE.exists():
-        try:
-            os.remove(DB_FILE)
-        except OSError:
-            pass
-
     init_db_sync()
+    with get_db_connection() as conn:
+        conn.execute("DELETE FROM workflows")
+        conn.execute("DELETE FROM endpoints")
+        conn.execute("DELETE FROM endpoint_steps")
+        conn.execute("DELETE FROM audit_events")
+        conn.execute("UPDATE pipeline_status SET status = 'idle'")
+        conn.commit()
     yield
-    # Clean up test database
-    if DB_FILE.exists():
-        try:
-            os.remove(DB_FILE)
-        except OSError:
-            pass
+    with get_db_connection() as conn:
+        conn.execute("DELETE FROM workflows")
+        conn.execute("DELETE FROM endpoints")
+        conn.execute("DELETE FROM endpoint_steps")
+        conn.execute("DELETE FROM audit_events")
+        conn.execute("UPDATE pipeline_status SET status = 'idle'")
+        conn.commit()
 
 
 def test_database_init() -> None:
@@ -185,12 +186,16 @@ def test_fastapi_endpoints() -> None:
             "workflowName": "edited_systems_workflow",
             "generatedDescription": "Edited description",
         },
+        headers={"X-API-Key": "default_dev_key"},
     )
     assert response.status_code == 200
     assert response.json()["workflowName"] == "edited_systems_workflow"
 
     # 4. Test Approve Workflow POST
-    response = client.post("/api/v1/workflows/wf_1/approve")
+    response = client.post(
+        "/api/v1/workflows/wf_1/approve",
+        headers={"X-API-Key": "default_dev_key"},
+    )
     assert response.status_code == 200
     assert response.json()["status"] == "approved"
 

@@ -267,9 +267,9 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
             wf_id = wf["id"]
             approved = 0
             rejection_reason = None
-            system_name = wf["system_name"]
-            display_name = wf["display_name"]
-            wf_desc = wf["generated_description"]
+            system_name = wf.get("system_name") or wf.get("workflow_name") or "unknown_workflow"
+            display_name = wf.get("display_name") or wf.get("workflow_name") or system_name
+            wf_desc = wf.get("generated_description") or f"Operations workflow for {display_name}"
 
             if wf_id in existing:
                 approved = existing[wf_id]["approved"]
@@ -388,6 +388,7 @@ def get_workflows(
                     "id": wf_id,
                     "systemName": wf["system_name"],
                     "displayName": wf["display_name"],
+                    "workflowName": wf["display_name"],
                     "riskLevel": wf["risk_level"],
                     "clusterSize": len(underlying) or wf["cluster_size"],
                     "confidence": wf["confidence"],
@@ -545,10 +546,14 @@ async def sync_governance_to_mcp_proxy() -> None:
 
             # Clear old steps and recreate
             wf.steps.clear()
-            for ep in underlying:
+            for idx, ep in enumerate(underlying):
                 step = EndpointStep(
+                    step_order=idx + 1,
+                    operation_id=ep["operation_id"],
                     method=ep["method"],
-                    path=ep["url"],
+                    url=ep["url"],
+                    required_params=ep.get("required_params", "[]"),
+                    created_at=datetime.now(timezone.utc).isoformat(),
                 )
                 wf.steps.append(step)
 

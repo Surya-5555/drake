@@ -16,6 +16,7 @@ def test_workflow_lifecycle_and_reload():
     with TestClient(app) as client:
         # Helper to run async db seeding
         async def seed_pending_workflow():
+            import datetime
             async with async_session() as session:
                 # Clean up existing test workflows for isolation
                 await session.execute(
@@ -25,23 +26,34 @@ def test_workflow_lifecycle_and_reload():
                 # Insert first workflow as pending
                 wf1 = Workflow(
                     id="test_wf_1",
-                    name="test_workflow_one",
-                    description="A test workflow description",
+                    system_name="test_workflow_one",
+                    display_name="test_workflow_one",
+                    generated_description="A test workflow description",
                     risk_level="low",
-                    status="pending",
+                    approved=0,
+                    cluster_size=1,
+                    confidence=0.9,
                 )
                 step1 = EndpointStep(
-                    method="GET", path="/redfish/v1/Systems/{ComputerSystemId}"
+                    step_order=1,
+                    operation_id="GetSystem",
+                    method="GET",
+                    url="/redfish/v1/Systems/{ComputerSystemId}",
+                    required_params="[]",
+                    created_at=datetime.datetime.now().isoformat(),
                 )
                 wf1.steps.append(step1)
 
                 # Insert second workflow as pending
                 wf2 = Workflow(
                     id="test_wf_2",
-                    name="test_workflow_two",
-                    description="Second test workflow",
+                    system_name="test_workflow_two",
+                    display_name="test_workflow_two",
+                    generated_description="Second test workflow",
                     risk_level="high",
-                    status="pending",
+                    approved=0,
+                    cluster_size=1,
+                    confidence=0.9,
                 )
 
                 session.add_all([wf1, wf2])
@@ -49,8 +61,8 @@ def test_workflow_lifecycle_and_reload():
 
         asyncio.run(seed_pending_workflow())
 
-        # 1. Verify GET /workflows/pending returns our seeded workflows
-        response = client.get("/workflows/pending")
+        # 1. Verify GET /api/v1/workflows/pending returns our seeded workflows
+        response = client.get("/api/v1/workflows/pending")
         assert response.status_code == 200
         pending_list = response.json()
         assert len(pending_list) >= 2
@@ -58,17 +70,24 @@ def test_workflow_lifecycle_and_reload():
         assert any(wf["id"] == "test_wf_2" for wf in pending_list)
 
         # 2. Approve test_wf_1 via REST endpoint
-        response = client.post("/workflows/test_wf_1/approve")
+        response = client.post(
+            "/api/v1/workflows/test_wf_1/approve",
+            headers={"X-API-Key": "default_dev_key"},
+        )
         assert response.status_code == 200
         assert response.json() == {
-            "message": "Workflow test_wf_1 approved successfully"
+            "status": "approved",
         }
 
         # 3. Reject test_wf_2 via REST endpoint
-        response = client.post("/workflows/test_wf_2/reject")
+        response = client.post(
+            "/api/v1/workflows/test_wf_2/reject",
+            json={"reason": "test rejection"},
+            headers={"X-API-Key": "default_dev_key"},
+        )
         assert response.status_code == 200
         assert response.json() == {
-            "message": "Workflow test_wf_2 rejected successfully"
+            "status": "rejected",
         }
 
         # Verify statuses updated correctly in SQLite
@@ -84,13 +103,16 @@ def test_workflow_lifecycle_and_reload():
                         select(Workflow).where(Workflow.id == "test_wf_2")
                     )
                 ).scalar_one()
-                assert wf1.status == "approved"
-                assert wf2.status == "rejected"
+                assert wf1.approved == 1
+                assert wf2.approved == 2
 
         asyncio.run(verify_database_states())
 
-        # 4. Trigger /reload to register approved tools dynamically
-        response = client.post("/reload")
+        # 4. Trigger /api/v1/mcp/reload to register approved tools dynamically
+        response = client.post(
+            "/api/v1/mcp/reload",
+            headers={"X-API-Key": "default_dev_key"},
+        )
         assert response.status_code == 200
         reload_data = response.json()
         assert reload_data["status"] == "reloaded"

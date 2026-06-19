@@ -5,7 +5,7 @@ from src.core.database import Workflow, EndpointStep
 from src.core.exceptions import DellProxyExecutionError
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @patch("src.proxy.executors.httpx_executor.async_session")
 @patch("src.proxy.executors.httpx_executor.httpx.AsyncClient")
 async def test_mock_httpx_executor_success(mock_async_client, mock_async_session):
@@ -14,10 +14,33 @@ async def test_mock_httpx_executor_success(mock_async_client, mock_async_session
     mock_result = MagicMock()
 
     # Mock workflow steps
-    step1 = EndpointStep(id=1, url="/systems/{system_id}", method="GET")
-    step2 = EndpointStep(id=2, url="/systems/{system_id}/reset", method="POST")
+    step1 = EndpointStep(
+        id=1,
+        step_order=1,
+        operation_id="GetSystem",
+        url="/systems/{system_id}",
+        method="GET",
+        required_params="[]",
+        created_at="2026-06-19T00:00:00",
+    )
+    step2 = EndpointStep(
+        id=2,
+        step_order=2,
+        operation_id="ResetSystem",
+        url="/systems/{system_id}/reset",
+        method="POST",
+        required_params="[]",
+        created_at="2026-06-19T00:00:00",
+    )
 
-    mock_wf = Workflow(id="wf_1", workflow_name="test_wf", steps=[step1, step2])
+    mock_wf = Workflow(
+        id="wf_1",
+        system_name="test_wf",
+        display_name="test_wf",
+        cluster_size=2,
+        confidence=0.9,
+        steps=[step1, step2],
+    )
 
     mock_result.scalar_one_or_none.return_value = mock_wf
     mock_session.execute = AsyncMock(return_value=mock_result)
