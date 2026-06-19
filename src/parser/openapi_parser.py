@@ -12,6 +12,37 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def resolve_refs(obj: Any, spec: Dict[str, Any], seen: set = None) -> Any:
+    """Recursively resolves $ref in OpenAPI schema."""
+    if seen is None:
+        seen = set()
+    
+    if isinstance(obj, dict):
+        if "$ref" in obj:
+            ref = obj["$ref"]
+            if ref in seen:
+                # Prevent infinite recursion in circular schemas
+                return {"type": "object", "description": f"Circular reference to {ref}"}
+            seen.add(ref)
+            
+            if ref.startswith("#/"):
+                parts = ref.split("/")[1:]
+                cur = spec
+                for p in parts:
+                    cur = cur.get(p, {})
+                # Resolve the target as well
+                res = resolve_refs(cur, spec, seen)
+                seen.remove(ref)
+                return res
+            else:
+                return obj  # External refs left as is for now
+        
+        return {k: resolve_refs(v, spec, set(seen)) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [resolve_refs(i, spec, set(seen)) for i in obj]
+    return obj
+
+
 class OpenAPIParser:
     """
     Parses and flattens large Enterprise OpenAPI specification files into a structured
@@ -93,25 +124,21 @@ class OpenAPIParser:
             if not isinstance(path_item, dict):
                 continue
 
-            # Common parameters for all methods in this path
+            # Resolve references in path item (e.g. parameter refs)
+            path_item = resolve_refs(path_item, spec)
             path_parameters = path_item.get("parameters", [])
 
             for method, operation in path_item.items():
-                # Filter out standard non-HTTP method keys like parameters, servers, etc.
                 if method.lower() not in [
-                    "get",
-                    "post",
-                    "put",
-                    "patch",
-                    "delete",
-                    "options",
-                    "head",
-                    "trace",
+                    "get", "post", "put", "patch", "delete", "options", "head", "trace"
                 ]:
                     continue
 
                 if not isinstance(operation, dict):
                     continue
+                
+                # Resolve entire operation to ensure parameters and requestBody are resolved
+                operation = resolve_refs(operation, spec)
 
                 operation_params = operation.get("parameters", [])
 
@@ -120,69 +147,69 @@ class OpenAPIParser:
 
                 required_params = []
                 for p in all_parameters:
-                    # Note: we only capture explicit 'required' or path params.
-                    if p.get("required") or p.get("in") == "path":
-                        param_name = p.get("name", "")
-                        param_loc = p.get("in", "query")
-                        # Validate location literal
-                        if param_loc not in [
-                            "path",
-                            "query",
-                            "header",
-                            "cookie",
-                            "body",
-                        ]:
-                            param_loc = "query"  # fallback
-                        required_params.append(
-                            RequiredParameter(
-                                name=param_name,
-                                location=param_loc,
-                                param_type=p.get("schema", {}).get("type", "string"),
-                            )
-                        )
-
-                # Synthesize body parameter if required
-                if operation.get("requestBody", {}).get("required"):
+                    # We capture all params (required or not) for full orchestration capabilities
+                    param_name = p.get("name", "")
+                    param_loc = p.get("in", "query")
+                    if param_loc not in ["path", "query", "header", "cookie"]:
+                        param_loc = "query"
+                        
+                    # Extract type from schema or directly
+                    p_schema = p.get("schema", {})
+                    param_type = p_schema.get("type", p.get("type", "string"))
+                    
                     required_params.append(
                         RequiredParameter(
-                            name="body", location="body", param_type="object"
+                            name=param_name,
+                            location=param_loc,
+                            param_type=param_type,
+                            required=p.get("required", param_loc == "path")
                         )
                     )
 
-                request_schema = (
-                    operation.get("requestBody", {})
-                    .get("content", {})
-                    .get("application/json", {})
-                    .get("schema")
-                )
-                if request_schema:
-                    request_schema = self._resolve_refs(request_schema, spec)
+                # Extract request schema
+                request_schema = None
+                req_body = operation.get("requestBody", {})
+                if req_body:
+                    content = req_body.get("content", {})
+                    for content_type, media in content.items():
+                        if "json" in content_type:
+                            request_schema = media.get("schema")
+                            break
+                    
+                    if request_schema:
+                        required_params.append(
+                            RequiredParameter(
+                                name="body", 
+                                location="body", 
+                                param_type="object",
+                                required=req_body.get("required", False)
+                            )
+                        )
+                        request_schema = self._resolve_refs(request_schema, spec)
 
-                response_schema = (
-                    operation.get("responses", {})
-                    .get("200", {})
-                    .get("content", {})
-                    .get("application/json", {})
-                    .get("schema")
-                )
-                if response_schema:
-                    response_schema = self._resolve_refs(response_schema, spec)
+                # Extract response schema
+                response_schema = None
+                responses = operation.get("responses", {})
+                for status_code, response in responses.items():
+                    if str(status_code).startswith("2"):
+                        content = response.get("content", {})
+                        for content_type, media in content.items():
+                            if "json" in content_type:
+                                response_schema = media.get("schema")
+                                break
+                        if response_schema:
+                            response_schema = self._resolve_refs(response_schema, spec)
+                            break
 
                 endpoint = EndpointContract(
-                    operation_id=operation.get(
-                        "operationId", f"{method.upper()}_{path}"
-                    ),
+                    operation_id=operation.get("operationId", f"{method.upper()}_{path}"),
                     method=method.upper(),
                     url=path,
                     required_params=required_params,
                     tags=(
                         operation.get("tags", [])
                         if isinstance(operation.get("tags"), list)
-                        else (
-                            [operation.get("tags")]
-                            if operation.get("tags") is not None
-                            else []
-                        )
+                        else ([operation.get("tags")] if operation.get("tags") is not None else [])
                     ),
                     summary=operation.get("summary", ""),
                     description=operation.get("description", ""),
@@ -201,36 +228,24 @@ class OpenAPIParser:
         )
         return contract_a
 
-    def export_contract_a(
-        self, output_file: str | Path = "contract_a_endpoints.json"
-    ) -> None:
+    def export_contract_a(self, output_file: str | Path = "contract_a_endpoints.json") -> None:
         """Exports the flattened endpoints to a JSON file."""
         try:
             contract_a = self.parse_and_flatten()
             output_path = Path(output_file)
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(contract_a.model_dump_json(indent=2))
-            logger.info(
-                f"Successfully exported {contract_a.total_endpoints} endpoints to {output_path}"
-            )
+            logger.info(f"Successfully exported {contract_a.total_endpoints} endpoints to {output_path}")
         except Exception as e:
             logger.error(f"Failed to export Contract A: {str(e)}")
             raise
 
-
 if __name__ == "__main__":
     import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Parse OpenAPI spec and generate Contract A"
-    )
+    parser = argparse.ArgumentParser(description="Parse OpenAPI spec and generate Contract A")
     parser.add_argument("input_file", help="Path to the OpenAPI JSON or YAML file")
-    parser.add_argument(
-        "--output", default="contract_a_endpoints.json", help="Output file path"
-    )
-
+    parser.add_argument("--output", default="contract_a_endpoints.json", help="Output file path")
     args = parser.parse_args()
-
     try:
         parser_obj = OpenAPIParser(args.input_file)
         parser_obj.export_contract_a(args.output)
