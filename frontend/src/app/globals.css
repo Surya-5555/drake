@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@import "reactflow/dist/style.css";
+
+:root {
+  --background: 248 250 252;
+  --foreground: 15 23 42;
+  --muted: 241 245 249;
+  --muted-foreground: 71 85 105;
+  --border: 203 213 225;
+  --card: 255 255 255;
+  --primary: 8 88 164;
+  --primary-foreground: 255 255 255;
+  --destructive: 185 28 28;
+  --success: 22 101 52;
+  --warning: 180 83 9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--background));
+  color: rgb(var(--foreground));
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.react-flow__node {
+  border-radius: 6px;
+  border: 1px solid rgb(var(--border));
+  background: rgb(var(--card));
+  color: rgb(var(--foreground));
+  font-size: 12px;
+}
+
+.react-flow__controls-button {
+  border-color: rgb(var(--border));
+}
+

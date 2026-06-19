@@ -1,45 +1,63 @@
 {
   "workflows": {
-    "server_health_check": {
-      "name": "server_health_check",
-      "description": "Query hardware status, power logs, and health summaries of a server.",
+    "edited_systems_workflow": {
+      "name": "edited_systems_workflow",
+      "description": "Edited description",
       "steps": [
         {
           "step_id": 1,
-          "name": "get_system_details",
+          "name": "GET_/redfish/v1",
           "method": "GET",
-          "path": "/redfish/v1/Systems/System.Embedded.1",
-          "params": {}
-        },
-        {
-          "step_id": 2,
-          "name": "get_power_status",
-          "method": "GET",
-          "path": "/redfish/v1/Chassis/System.Embedded.1/Power",
+          "path": "/redfish/v1",
           "params": {}
         }
       ]
     },
-    "firmware_update_workflow": {
-      "name": "firmware_update_workflow",
-      "description": "Stages a firmware image and triggers update actions.",
+    "idrac_endpoint_clusterer": {
+      "name": "idrac_endpoint_clusterer",
+      "description": "This workflow clusters and organizes iDRAC API endpoints for efficient management and automation of Dell PowerEdge servers.",
       "steps": [
         {
           "step_id": 1,
-          "name": "get_firmware_inventory",
+          "name": "GET_/redfish/v1/AccountService/Accounts",
           "method": "GET",
-          "path": "/redfish/v1/UpdateService/FirmwareInventory",
+          "path": "/redfish/v1/AccountService/Accounts",
           "params": {}
         },
         {
           "step_id": 2,
-          "name": "trigger_update",
+          "name": "POST_/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset",
           "method": "POST",
-          "path": "/redfish/v1/UpdateService/Actions/SimpleUpdate",
-          "params": {
-            "ImageURI": "{image_uri}",
-            "TransferProtocol": "HTTP"
-          }
+          "path": "/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "PATCH_/redfish/v1/Systems/{ComputerSystemId}",
+          "method": "PATCH",
+          "path": "/redfish/v1/Systems/{ComputerSystemId}",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "POST_/redfish/v1/AccountService/Accounts",
+          "method": "POST",
+          "path": "/redfish/v1/AccountService/Accounts",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "POST_/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
+          "method": "POST",
+          "path": "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
+          "params": {}
+        },
+        {
+          "step_id": 6,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}",
+          "method": "GET",
+          "path": "/redfish/v1/Systems/{ComputerSystemId}",
+          "params": {}
         }
       ]
     }
