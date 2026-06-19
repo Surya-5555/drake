@@ -22,7 +22,7 @@ class OllamaService:
     """Purpose: Communicate with local Ollama only.
 
     Responsibilities:
-        Send prompts to llama3, handle timeouts, and retrieve structured JSON.
+        Send prompts to phi3:mini, handle timeouts, and retrieve structured JSON.
     Inputs:
         Workflow discovery prompt strings.
     Outputs:

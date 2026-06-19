@@ -22,10 +22,10 @@ The module uses:
 
 ## Ollama Setup
 
-Install Ollama on the local workstation or server, then pull llama3:
+Install Ollama on the local workstation or server, then pull phi3:mini:
 
 ```bash
-ollama pull llama3
+ollama pull phi3:mini
 ollama serve
 ```
 
@@ -35,7 +35,7 @@ No OpenAI, Anthropic, or cloud APIs are used.
 
 Settings are read from environment variables in `ai_cluster/config/settings.py`:
 
-- `OLLAMA_MODEL`, default `llama3`
+- `OLLAMA_MODEL`, default `phi3:mini`
 - `OLLAMA_TIMEOUT`, default `120`
 - `OLLAMA_MAX_RETRIES`, default `2`
 - `OUTPUT_PATH`, default `ai_cluster/output/workflow_mapping.json`
