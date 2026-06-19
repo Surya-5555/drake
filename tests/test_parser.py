@@ -53,12 +53,12 @@ from src.core.exceptions import (
 )
 from src.core.models import ContractA, EndpointContract, RequiredParameter
 from src.parser.openapi_parser import (
+    OpenAPIParser,
     _extract_required_params,
     _merge_parameters,
     build_contract_a,
     extract_endpoints,
     load_spec,
-    parse_openapi_spec,
     save_contract_a,
     validate_spec,
 )
@@ -545,7 +545,8 @@ class TestMiniSpecIntegration:
     ) -> None:
         """parse_openapi_spec() returns ContractA for the fixture spec."""
         output = tmp_path / "contract_a.json"
-        contract = parse_openapi_spec(spec_path=mini_spec_path, output_path=output)
+        parser = OpenAPIParser(mini_spec_path)
+        contract = parser.parse_and_flatten(output_path=output)
         assert isinstance(contract, ContractA)
         assert contract.total_endpoints == 7
 
@@ -554,7 +555,8 @@ class TestMiniSpecIntegration:
     ) -> None:
         """The output JSON file is created on disk."""
         output = tmp_path / "contract_a.json"
-        parse_openapi_spec(spec_path=mini_spec_path, output_path=output)
+        parser = OpenAPIParser(mini_spec_path)
+        parser.parse_and_flatten(output_path=output)
         assert output.exists()
 
     def test_output_token_reduction(
@@ -565,7 +567,8 @@ class TestMiniSpecIntegration:
         This validates the core token-exhaustion prevention guarantee.
         """
         output = tmp_path / "contract_a.json"
-        parse_openapi_spec(spec_path=mini_spec_path, output_path=output)
+        parser = OpenAPIParser(mini_spec_path)
+        parser.parse_and_flatten(output_path=output)
 
         input_size = mini_spec_path.stat().st_size
         output_size = output.stat().st_size
@@ -582,7 +585,8 @@ class TestMiniSpecIntegration:
         contain NO 'description' or 'summary' keys at any nesting depth.
         """
         output = tmp_path / "contract_a.json"
-        parse_openapi_spec(spec_path=mini_spec_path, output_path=output)
+        parser = OpenAPIParser(mini_spec_path)
+        parser.parse_and_flatten(output_path=output)
         content = output.read_text(encoding="utf-8")
         assert '"description"' not in content
         assert '"summary"' not in content
@@ -627,7 +631,8 @@ class TestRealSpecIntegration:
     ) -> None:
         """Full pipeline runs end-to-end on the real spec."""
         output = tmp_path / "contract_a_real.json"
-        contract = parse_openapi_spec(spec_path=real_spec_path, output_path=output)
+        parser = OpenAPIParser(real_spec_path)
+        contract = parser.parse_and_flatten(output_path=output)
         assert output.exists()
         assert contract.total_endpoints >= 400
         assert contract.spec_title == "Dell iDRAC 9 Redfish API Overview"

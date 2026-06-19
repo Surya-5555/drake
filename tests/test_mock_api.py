@@ -19,5 +19,8 @@ async def test_mock_api_systems(mock_api_client: httpx.AsyncClient) -> None:
     """
     Test a dynamic path parameter endpoint against the mock server.
     """
-    response = await mock_api_client.get("/redfish/v1/Systems/1234")
+    response = await mock_api_client.get(
+        "/redfish/v1/Systems/1234",
+        auth=("root", "calvin")
+    )
     assert response.status_code == 200
