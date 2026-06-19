@@ -27,7 +27,7 @@ def _contract_a() -> dict[str, object]:
                 "url": "/redfish/v1/Power",
                 "required_params": [],
             },
-        ]
+        ],
     }
 
 
@@ -42,7 +42,7 @@ def test_validate_contract_a() -> None:
 
 def test_validate_contract_a_rejects_duplicates() -> None:
     payload = _contract_a()
-    payload["endpoints"].append(payload["endpoints"][0]) # type: ignore
+    payload["endpoints"].append(payload["endpoints"][0])  # type: ignore
 
     with pytest.raises(WorkflowValidationError, match="Duplicate Contract A"):
         WorkflowValidationService().validate_contract_a(payload)
@@ -112,4 +112,3 @@ def test_validate_contract_b_rejects_missing_api() -> None:
 def test_validate_llm_response_rejects_invalid_contract_b() -> None:
     with pytest.raises(WorkflowValidationError, match="Invalid Contract B"):
         WorkflowValidationService().validate_llm_response({"workflows": []})
-

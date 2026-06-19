@@ -97,4 +97,3 @@ class WorkflowValidationService:
                 duplicates.add(value)
             seen.add(value)
         return duplicates
-

@@ -42,9 +42,13 @@ mcp = FastMCP("Dell Enterprise Proxy")
 active_sessions = weakref.WeakSet()
 
 original_init = ServerSession.__init__
+
+
 def tracked_init(self, *args, **kwargs):
     original_init(self, *args, **kwargs)
     active_sessions.add(self)
+
+
 ServerSession.__init__ = tracked_init
 
 
@@ -99,21 +103,23 @@ async def load_approved_tools_from_db() -> None:
 
             def make_tool(wf_name, wf_desc, p_names):
                 import inspect
-                
+
                 async def dynamic_tool(**kwargs) -> dict:
                     return await execute_workflow_route(wf_name, kwargs)
-                
+
                 dynamic_tool.__name__ = wf_name
                 dynamic_tool.__doc__ = wf_desc
-                
+
                 params = []
                 for p in p_names:
-                    params.append(inspect.Parameter(
-                        name=p,
-                        kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                        default="",
-                        annotation=str
-                    ))
+                    params.append(
+                        inspect.Parameter(
+                            name=p,
+                            kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                            default="",
+                            annotation=str,
+                        )
+                    )
                 dynamic_tool.__signature__ = inspect.Signature(parameters=params)  # type: ignore
                 return dynamic_tool
 
@@ -130,7 +136,11 @@ async def get_proxy_status() -> Dict[str, Any]:
     Retrieve diagnostics metadata on the status of the Workflow Proxy.
     """
     tools = await mcp.list_tools()
-    wf_names = [t.name for t in tools if t.name not in {"get_proxy_status", "preview_workflow_steps"}]
+    wf_names = [
+        t.name
+        for t in tools
+        if t.name not in {"get_proxy_status", "preview_workflow_steps"}
+    ]
     return {
         "status": "online",
         "registered_workflows": wf_names,
@@ -142,14 +152,14 @@ async def get_proxy_status() -> Dict[str, Any]:
 async def preview_workflow_steps(workflow_id: str) -> Dict[str, Any]:
     """
     Acts as a 'Blast Radius Audit' tool.
-    
-    Satisfies strict enterprise compliance by allowing human admins to review 
-    API execution paths and simulate the exact granular API calls it is about 
+
+    Satisfies strict enterprise compliance by allowing human admins to review
+    API execution paths and simulate the exact granular API calls it is about
     to make before any potentially destructive actions occur.
-    
+
     Args:
         workflow_id (str): The unique identifier of the workflow to preview.
-        
+
     Returns:
         Dict[str, Any]: A simulated list of granular API calls for the requested workflow.
     """
@@ -173,7 +183,7 @@ async def preview_workflow_steps(workflow_id: str) -> Dict[str, Any]:
                     "url": step.url,
                 }
                 for idx, step in enumerate(wf.steps)
-            ]
+            ],
         }
 
 
@@ -187,8 +197,11 @@ async def lifespan(app: FastAPI):
     # Sync governance.db state (Leiden clusters) to mcp_proxy.db
     try:
         from src.core.database import sync_governance_to_mcp_proxy
+
         await sync_governance_to_mcp_proxy()
-        logger.info("Successfully synchronized governance.db to mcp_proxy.db at startup.")
+        logger.info(
+            "Successfully synchronized governance.db to mcp_proxy.db at startup."
+        )
     except Exception as e:
         logger.error(f"Failed to sync governance.db to mcp_proxy.db at startup: {e}")
 
@@ -216,6 +229,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 async def reload_mcp_tools():
     try:
@@ -246,6 +260,7 @@ async def reload_mcp_tools():
     except Exception as err:
         logger.exception("Reload failed")
         raise err
+
 
 # Mount the MCP server to FastAPI using FastMCP's ASGI/SSE integration
 app.mount("/mcp", mcp.http_app(transport="sse"))

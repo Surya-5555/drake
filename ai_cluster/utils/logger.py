@@ -19,4 +19,3 @@ def get_logger(name: str) -> logging.Logger:
     """Return a configured logger for a module or class."""
     configure_logging()
     return logging.getLogger(name)
-

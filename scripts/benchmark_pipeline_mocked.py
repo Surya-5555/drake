@@ -7,6 +7,7 @@ from src.parser.openapi_parser import OpenAPIParser
 from src.ai_clustering.graph_clustering import detect_communities
 from src.core.database import save_endpoints, save_workflows, save_edges
 
+
 def benchmark():
     print("Starting Fast Validation Benchmark (Mocked Embeddings)...", flush=True)
     timings = {}
@@ -24,17 +25,19 @@ def benchmark():
 
     endpoints = []
     for ep in contract_a.endpoints:
-        endpoints.append({
-            "operation_id": ep.operation_id,
-            "method": ep.method,
-            "url": ep.url,
-            "required_params": [p.name for p in ep.required_params],
-            "tags": ep.tags,
-            "summary": ep.summary,
-            "description": ep.description,
-            "request_schema": ep.request_schema,
-            "response_schema": ep.response_schema,
-        })
+        endpoints.append(
+            {
+                "operation_id": ep.operation_id,
+                "method": ep.method,
+                "url": ep.url,
+                "required_params": [p.name for p in ep.required_params],
+                "tags": ep.tags,
+                "summary": ep.summary,
+                "description": ep.description,
+                "request_schema": ep.request_schema,
+                "response_schema": ep.response_schema,
+            }
+        )
 
     # 2. Embedding Generation (MOCKED)
     t0 = time.perf_counter()
@@ -67,7 +70,7 @@ def benchmark():
         op_id_i = endpoints[i]["operation_id"]
         sims = sim_matrix[i].copy()
         sims[i] = 0.0
-        
+
         if num_nodes - 1 < k:
             top_k_indices = np.argsort(sims)[::-1]
         else:
@@ -81,9 +84,14 @@ def benchmark():
                 if not G.has_edge(op_id_i, op_id_j):
                     G.add_edge(op_id_i, op_id_j, weight=float(weight))
                 else:
-                    G[op_id_i][op_id_j]["weight"] = max(G[op_id_i][op_id_j]["weight"], float(weight))
-    
-    edges_list = [{"source": u, "target": v, "weight": data.get("weight", 1.0)} for u, v, data in G.edges(data=True)]
+                    G[op_id_i][op_id_j]["weight"] = max(
+                        G[op_id_i][op_id_j]["weight"], float(weight)
+                    )
+
+    edges_list = [
+        {"source": u, "target": v, "weight": data.get("weight", 1.0)}
+        for u, v, data in G.edges(data=True)
+    ]
     t1 = time.perf_counter()
     timings["Graph Construction"] = t1 - t0
 
@@ -97,12 +105,12 @@ def benchmark():
     t0 = time.perf_counter()
     updated_endpoints = []
     workflows_list = []
-    
+
     for comm in communities:
         sorted_ops = sorted(list(comm))
-        comm_hash = hashlib.md5("".join(sorted_ops).encode('utf-8')).hexdigest()[:8]
+        comm_hash = hashlib.md5("".join(sorted_ops).encode("utf-8")).hexdigest()[:8]
         comm_id = f"c_{comm_hash}"
-        
+
         comm_endpoints = []
         for op_id in sorted_ops:
             for ep in endpoints:
@@ -111,9 +119,9 @@ def benchmark():
                     updated_endpoints.append(ep)
                     comm_endpoints.append(ep)
                     break
-                    
+
         workflow_id = f"wf_{comm_id}"
-        
+
         # Heuristic labeling
         methods = [ep["method"] for ep in comm_endpoints]
         tags = set()
@@ -122,26 +130,31 @@ def benchmark():
                 tags.update(ep["tags"])
             elif isinstance(ep.get("tags"), str):
                 tags.add(ep["tags"])
-        
+
         primary_tag = sorted(list(tags))[0] if tags else "General"
         wf_name = f"{primary_tag} Management"
         wf_desc = f"Group of {len(comm_endpoints)} endpoints primarily dealing with {primary_tag} operations."
         confidence = 0.5
 
         risk = "low"
-        if "DELETE" in methods: risk = "critical"
-        elif "POST" in methods: risk = "high"
-        elif "PATCH" in methods or "PUT" in methods: risk = "medium"
+        if "DELETE" in methods:
+            risk = "critical"
+        elif "POST" in methods:
+            risk = "high"
+        elif "PATCH" in methods or "PUT" in methods:
+            risk = "medium"
 
-        workflows_list.append({
-            "id": workflow_id,
-            "workflow_name": wf_name,
-            "risk_level": risk,
-            "cluster_size": len(comm_endpoints),
-            "confidence": confidence,
-            "generated_description": wf_desc,
-            "community_id": comm_id,
-        })
+        workflows_list.append(
+            {
+                "id": workflow_id,
+                "workflow_name": wf_name,
+                "risk_level": risk,
+                "cluster_size": len(comm_endpoints),
+                "confidence": confidence,
+                "generated_description": wf_desc,
+                "community_id": comm_id,
+            }
+        )
     t1 = time.perf_counter()
     timings["Workflow Labeling"] = t1 - t0
 
@@ -161,13 +174,16 @@ def benchmark():
     print(f"Edges:      {len(edges_list)}", flush=True)
     print(f"Communities:{len(communities)}", flush=True)
     print(f"Workflows:  {len(workflows_list)}", flush=True)
-    
+
     print("\n--- TIMING BREAKDOWN ---", flush=True)
     for stage, t in timings.items():
         if stage != "Total Runtime":
-            pct = (t / timings['Total Runtime']) * 100
+            pct = (t / timings["Total Runtime"]) * 100
             print(f"{stage:22} : {t:.4f}s ({pct:.1f}%)", flush=True)
-    print(f"{'Total Runtime':22} : {timings['Total Runtime']:.4f}s (100.0%)", flush=True)
+    print(
+        f"{'Total Runtime':22} : {timings['Total Runtime']:.4f}s (100.0%)", flush=True
+    )
+
 
 if __name__ == "__main__":
     benchmark()

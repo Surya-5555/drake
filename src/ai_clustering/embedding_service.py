@@ -43,12 +43,18 @@ class EmbeddingService:
             with self._lock:
                 if self._model is None:
                     try:
-                        logger.info("Loading sentence-transformers model (all-MiniLM-L6-v2)...")
+                        logger.info(
+                            "Loading sentence-transformers model (all-MiniLM-L6-v2)..."
+                        )
                         self._model = SentenceTransformer("all-MiniLM-L6-v2")
                         logger.info("Model loaded successfully.")
                     except Exception as err:
-                        logger.error(f"Failed to load sentence-transformers model: {err}")
-                        raise RuntimeError(f"Semantic embedding model failed to load: {err}") from err
+                        logger.error(
+                            f"Failed to load sentence-transformers model: {err}"
+                        )
+                        raise RuntimeError(
+                            f"Semantic embedding model failed to load: {err}"
+                        ) from err
         return self._model
 
     def format_endpoint_text(self, endpoint: Dict[str, Any]) -> str:
@@ -69,7 +75,7 @@ class EmbeddingService:
             tags = [tags]
 
         tag_str = ", ".join(tags)
-        
+
         # Combine the fields prioritizing summary and description
         components = []
         if method and url:
@@ -80,7 +86,7 @@ class EmbeddingService:
             components.append(f"Summary: {summary}")
         if description:
             components.append(f"Description: {description}")
-            
+
         # Parse $ref for request schema
         if request_schema and isinstance(request_schema, dict):
             ref = request_schema.get("$ref")
@@ -94,7 +100,7 @@ class EmbeddingService:
             if ref:
                 schema_name = ref.split("/")[-1]
                 components.append(f"Schema: {schema_name}")
-                
+
         return "\n".join(components)
 
     def generate_embeddings(self, endpoints: List[Dict[str, Any]]) -> np.ndarray:
@@ -103,10 +109,10 @@ class EmbeddingService:
         """
         if not endpoints:
             return np.array([])
-            
+
         texts = [self.format_endpoint_text(ep) for ep in endpoints]
         model = self._get_model()
-        
+
         # Generate embeddings (returns a numpy array or torch tensor)
         embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
         return embeddings

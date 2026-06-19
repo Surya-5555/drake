@@ -70,7 +70,7 @@ def test_clustering_service_generates_valid_contract_b() -> None:
                     "url": "/redfish/v1/Power",
                     "required_params": [],
                 },
-            ]
+            ],
         }
     )
 
@@ -108,7 +108,7 @@ def test_clustering_service_retries_after_invalid_mapping() -> None:
                     "url": "/redfish/v1/Power",
                     "required_params": [],
                 },
-            ]
+            ],
         }
     )
     fake_ollama = RetryFakeOllamaService()

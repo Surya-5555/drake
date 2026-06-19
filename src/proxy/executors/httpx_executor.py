@@ -1,7 +1,13 @@
 import logging
 from typing import Any, Dict
 import httpx
-from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential, retry_if_exception_type, retry_if_exception
+from tenacity import (
+    AsyncRetrying,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    retry_if_exception,
+)
 from src.proxy.executors.base import BaseExecutor
 from src.core.exceptions import DellProxyExecutionError
 
@@ -12,6 +18,7 @@ import re
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from src.core.database import async_session, Workflow
+
 
 class MockHTTPXExecutor(BaseExecutor):
     """
@@ -38,20 +45,21 @@ class MockHTTPXExecutor(BaseExecutor):
             wf = result.scalar_one_or_none()
             if not wf:
                 raise DellProxyExecutionError(f"Workflow '{workflow_name}' not found.")
-            
+
             steps = wf.steps
 
         step_results = []
 
         def is_retryable_status_error(exc: BaseException) -> bool:
             if isinstance(exc, httpx.HTTPStatusError):
-                return exc.response.status_code == 429 or exc.response.status_code >= 500
+                return (
+                    exc.response.status_code == 429 or exc.response.status_code >= 500
+                )
             return False
 
-        retry_condition = (
-            retry_if_exception_type(httpx.TimeoutException) |
-            retry_if_exception(is_retryable_status_error)
-        )
+        retry_condition = retry_if_exception_type(
+            httpx.TimeoutException
+        ) | retry_if_exception(is_retryable_status_error)
 
         async with httpx.AsyncClient() as client:
             for step in steps:
@@ -60,11 +68,15 @@ class MockHTTPXExecutor(BaseExecutor):
                 # Substitute placeholders
                 for match in re.findall(r"\{([a-zA-Z0-9_]+)\}", step.url):
                     if match in params:
-                        target_url = target_url.replace(f"{{{match}}}", str(params[match]))
-                
+                        target_url = target_url.replace(
+                            f"{{{match}}}", str(params[match])
+                        )
+
                 # Extract body parameters
-                body_params = {k: v for k, v in params.items() if f"{{{k}}}" not in step.url}
-                
+                body_params = {
+                    k: v for k, v in params.items() if f"{{{k}}}" not in step.url
+                }
+
                 req_kwargs = {"timeout": 5.0}
                 if step.method.lower() in ["post", "put", "patch"] and body_params:
                     req_kwargs["json"] = body_params
@@ -74,7 +86,7 @@ class MockHTTPXExecutor(BaseExecutor):
                         stop=stop_after_attempt(3),
                         wait=wait_exponential(multiplier=1, min=1, max=10),
                         retry=retry_condition,
-                        reraise=True
+                        reraise=True,
                     ):
                         with attempt:
                             response = await client.request(
@@ -87,25 +99,25 @@ class MockHTTPXExecutor(BaseExecutor):
                             except ValueError:
                                 data = {"raw": response.text}
 
-                            step_results.append({
-                                "step_id": step.id,
-                                "method": step.method.upper(),
-                                "url": target_url,
-                                "status_code": response.status_code,
-                                "data": data
-                            })
+                            step_results.append(
+                                {
+                                    "step_id": step.id,
+                                    "method": step.method.upper(),
+                                    "url": target_url,
+                                    "status_code": response.status_code,
+                                    "data": data,
+                                }
+                            )
                 except Exception as e:
                     logger.error(f"Error during step '{step.url}' execution: {e}")
                     raise DellProxyExecutionError(
                         f"Workflow step execution failed for '{workflow_name}' on '{step.url}' after exhausting retries.",
-                        original_exception=e
+                        original_exception=e,
                     )
 
         return {
             "workflow_id": wf.id,
             "status": "success",
             "steps_executed": len(step_results),
-            "step_results": step_results
+            "step_results": step_results,
         }
-
-

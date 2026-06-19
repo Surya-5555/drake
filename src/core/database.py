@@ -44,18 +44,15 @@ def init_db_sync() -> None:
     """Initialize SQLite tables for governance and audit trails if they don't exist."""
     with get_db_connection() as conn:
         # 1. Pipeline status tracking
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS pipeline_status (
                 stage TEXT PRIMARY KEY,
                 status TEXT NOT NULL
             )
-            """
-        )
+            """)
 
         # 2. Ingested OpenAPI endpoints
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS endpoints (
                 operation_id TEXT PRIMARY KEY,
                 method TEXT NOT NULL,
@@ -63,23 +60,19 @@ def init_db_sync() -> None:
                 required_params TEXT NOT NULL,  -- JSON serialized list of strings
                 community_id TEXT
             )
-            """
-        )
+            """)
 
         # 2b. Graph Edges
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS edges (
                 source TEXT NOT NULL,
                 target TEXT NOT NULL,
                 weight REAL NOT NULL
             )
-            """
-        )
+            """)
 
         # 3. Discovered workflow clusters
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS workflows (
                 id TEXT PRIMARY KEY,
                 workflow_name TEXT NOT NULL,
@@ -91,12 +84,10 @@ def init_db_sync() -> None:
                 rejection_reason TEXT,
                 community_id TEXT
             )
-            """
-        )
+            """)
 
         # 4. Audit trail events
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS audit_events (
                 id TEXT PRIMARY KEY,
                 event_type TEXT NOT NULL,
@@ -106,12 +97,10 @@ def init_db_sync() -> None:
                 actor TEXT NOT NULL,
                 timestamp TEXT NOT NULL
             )
-            """
-        )
+            """)
 
         # 5. Endpoint steps
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS endpoint_steps (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 workflow_id TEXT NOT NULL,
@@ -125,11 +114,15 @@ def init_db_sync() -> None:
                 created_at TEXT NOT NULL,
                 FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
             )
-            """
-        )
+            """)
 
         # Populate default statuses if empty
-        for stage in ["ingestionStatus", "graphStatus", "clusteringStatus", "mcpRuntimeStatus"]:
+        for stage in [
+            "ingestionStatus",
+            "graphStatus",
+            "clusteringStatus",
+            "mcpRuntimeStatus",
+        ]:
             conn.execute(
                 "INSERT OR IGNORE INTO pipeline_status (stage, status) VALUES (?, ?)",
                 (stage, "idle"),
@@ -162,7 +155,9 @@ def log_audit_event(
     actor: str = "system",
 ) -> None:
     """Create a new audit trail event in the database."""
-    event_id = f"evt_{datetime.now(timezone.utc).timestamp()}_{hash(description) & 0xffff}"
+    event_id = (
+        f"evt_{datetime.now(timezone.utc).timestamp()}_{hash(description) & 0xffff}"
+    )
     timestamp = datetime.now(timezone.utc).isoformat()
     with get_db_connection() as conn:
         conn.execute(
@@ -170,7 +165,15 @@ def log_audit_event(
             INSERT INTO audit_events (id, event_type, status, workflow_name, description, actor, timestamp)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (event_id, event_type, status, workflow_name, description, actor, timestamp),
+            (
+                event_id,
+                event_type,
+                status,
+                workflow_name,
+                description,
+                actor,
+                timestamp,
+            ),
         )
         conn.commit()
 
@@ -240,7 +243,9 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
     """Bulk save discovered workflow clusters, preserving approved status if exists."""
     with get_db_connection() as conn:
         # Load existing approval status for preservation
-        cursor = conn.execute("SELECT id, approved, rejection_reason, workflow_name, generated_description FROM workflows")
+        cursor = conn.execute(
+            "SELECT id, approved, rejection_reason, workflow_name, generated_description FROM workflows"
+        )
         existing = {row["id"]: dict(row) for row in cursor.fetchall()}
 
         conn.execute("DELETE FROM workflows")
@@ -278,9 +283,12 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
                     wf.get("community_id", wf_id),
                 ),
             )
-            
+
             comm_id = wf.get("community_id", wf_id)
-            cursor = conn.execute("SELECT * FROM endpoints WHERE community_id = ? ORDER BY operation_id", (comm_id,))
+            cursor = conn.execute(
+                "SELECT * FROM endpoints WHERE community_id = ? ORDER BY operation_id",
+                (comm_id,),
+            )
             eps = cursor.fetchall()
             for i, ep in enumerate(eps):
                 conn.execute(
@@ -288,12 +296,24 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
                     INSERT INTO endpoint_steps (workflow_id, step_order, operation_id, method, url, required_params, request_schema, response_schema, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (wf_id, i + 1, ep["operation_id"], ep["method"], ep["url"], ep["required_params"], None, None, datetime.now(timezone.utc).isoformat())
+                    (
+                        wf_id,
+                        i + 1,
+                        ep["operation_id"],
+                        ep["method"],
+                        ep["url"],
+                        ep["required_params"],
+                        None,
+                        None,
+                        datetime.now(timezone.utc).isoformat(),
+                    ),
                 )
         conn.commit()
 
 
-def get_workflows(approved_only: bool = False, pending_only: bool = False) -> List[Dict[str, Any]]:
+def get_workflows(
+    approved_only: bool = False, pending_only: bool = False
+) -> List[Dict[str, Any]]:
     """Retrieve workflows and associate underlying endpoints based on community_id."""
     with get_db_connection() as conn:
         query = "SELECT * FROM workflows"
@@ -311,6 +331,7 @@ def get_workflows(approved_only: bool = False, pending_only: bool = False) -> Li
         endpoints = [dict(row) for row in ep_cursor.fetchall()]
 
         from collections import defaultdict
+
         community_to_endpoints = defaultdict(list)
         for ep in endpoints:
             if ep["community_id"]:
@@ -339,7 +360,8 @@ def get_workflows(approved_only: bool = False, pending_only: bool = False) -> Li
                         "url": ep["url"],
                         "path": ep["url"],
                     }
-                    for ep in endpoints if ep["operation_id"] == wf_id
+                    for ep in endpoints
+                    if ep["operation_id"] == wf_id
                 ]
 
             results.append(
@@ -374,6 +396,7 @@ class Workflow(Base):
     """
     SQLAlchemy model representing a workflow cluster.
     """
+
     __tablename__ = "workflows"
 
     id = Column(String, primary_key=True)
@@ -386,17 +409,25 @@ class Workflow(Base):
     rejection_reason = Column(String)
     community_id = Column(String)
 
-    steps = relationship("EndpointStep", back_populates="workflow", cascade="all, delete-orphan", order_by="EndpointStep.step_order")
+    steps = relationship(
+        "EndpointStep",
+        back_populates="workflow",
+        cascade="all, delete-orphan",
+        order_by="EndpointStep.step_order",
+    )
 
 
 class EndpointStep(Base):
     """
     SQLAlchemy model representing a specific API endpoint/step inside a workflow.
     """
+
     __tablename__ = "endpoint_steps"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    workflow_id = Column(String, ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False)
+    workflow_id = Column(
+        String, ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False
+    )
     step_order = Column(Integer, nullable=False)
     operation_id = Column(String, nullable=False)
     method = Column(String, nullable=False)
@@ -444,6 +475,7 @@ async def sync_governance_to_mcp_proxy() -> None:
 
     # Group endpoints by community_id
     from collections import defaultdict
+
     community_to_endpoints = defaultdict(list)
     for ep in gov_endpoints:
         if ep["community_id"]:
@@ -460,7 +492,9 @@ async def sync_governance_to_mcp_proxy() -> None:
 
             # Check if this workflow already exists in mcp_proxy.db
             result = await session.execute(
-                select(Workflow).where(Workflow.id == wf_id).options(selectinload(Workflow.steps))
+                select(Workflow)
+                .where(Workflow.id == wf_id)
+                .options(selectinload(Workflow.steps))
             )
             wf = result.scalar_one_or_none()
 

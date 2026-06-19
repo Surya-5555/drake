@@ -85,4 +85,3 @@ class WorkflowMapping(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     workflows: list[Workflow] = Field(min_length=1)
-

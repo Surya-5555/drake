@@ -66,9 +66,7 @@ class WorkflowRepairService:
                 repaired_workflows[workflow_name] = existing.model_copy(
                     update={
                         "underlying_api_calls": calls,
-                        "required_params": self._required_params(
-                            calls, endpoint_by_id
-                        ),
+                        "required_params": self._required_params(calls, endpoint_by_id),
                     }
                 )
             assigned.add(endpoint.operation_id)

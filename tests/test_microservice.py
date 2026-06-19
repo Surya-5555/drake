@@ -21,30 +21,29 @@ def test_workflow_lifecycle_and_reload():
                 await session.execute(
                     delete(Workflow).where(Workflow.id.in_(["test_wf_1", "test_wf_2"]))
                 )
-                
+
                 # Insert first workflow as pending
                 wf1 = Workflow(
                     id="test_wf_1",
                     name="test_workflow_one",
                     description="A test workflow description",
                     risk_level="low",
-                    status="pending"
+                    status="pending",
                 )
                 step1 = EndpointStep(
-                    method="GET",
-                    path="/redfish/v1/Systems/{ComputerSystemId}"
+                    method="GET", path="/redfish/v1/Systems/{ComputerSystemId}"
                 )
                 wf1.steps.append(step1)
-                
+
                 # Insert second workflow as pending
                 wf2 = Workflow(
                     id="test_wf_2",
                     name="test_workflow_two",
                     description="Second test workflow",
                     risk_level="high",
-                    status="pending"
+                    status="pending",
                 )
-                
+
                 session.add_all([wf1, wf2])
                 await session.commit()
 
@@ -61,18 +60,30 @@ def test_workflow_lifecycle_and_reload():
         # 2. Approve test_wf_1 via REST endpoint
         response = client.post("/workflows/test_wf_1/approve")
         assert response.status_code == 200
-        assert response.json() == {"message": "Workflow test_wf_1 approved successfully"}
+        assert response.json() == {
+            "message": "Workflow test_wf_1 approved successfully"
+        }
 
         # 3. Reject test_wf_2 via REST endpoint
         response = client.post("/workflows/test_wf_2/reject")
         assert response.status_code == 200
-        assert response.json() == {"message": "Workflow test_wf_2 rejected successfully"}
+        assert response.json() == {
+            "message": "Workflow test_wf_2 rejected successfully"
+        }
 
         # Verify statuses updated correctly in SQLite
         async def verify_database_states():
             async with async_session() as session:
-                wf1 = (await session.execute(select(Workflow).where(Workflow.id == "test_wf_1"))).scalar_one()
-                wf2 = (await session.execute(select(Workflow).where(Workflow.id == "test_wf_2"))).scalar_one()
+                wf1 = (
+                    await session.execute(
+                        select(Workflow).where(Workflow.id == "test_wf_1")
+                    )
+                ).scalar_one()
+                wf2 = (
+                    await session.execute(
+                        select(Workflow).where(Workflow.id == "test_wf_2")
+                    )
+                ).scalar_one()
                 assert wf1.status == "approved"
                 assert wf2.status == "rejected"
 
@@ -88,12 +99,12 @@ def test_workflow_lifecycle_and_reload():
         async def verify_mcp_registration():
             tools = await mcp.list_tools()
             tool_names = [t.name for t in tools]
-            
+
             # The approved workflow should be registered
             assert "test_workflow_one" in tool_names
             # The rejected workflow should NOT be registered
             assert "test_workflow_two" not in tool_names
-            
+
             # Built-in diagnostic tools should be preserved
             assert "get_proxy_status" in tool_names
             assert "preview_workflow_steps" in tool_names

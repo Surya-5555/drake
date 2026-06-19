@@ -41,8 +41,10 @@ class TestOpenAPIParser:
         # Verify body parameter is synthesized
         post_accounts = next(
             (
-                ep for ep in endpoints
-                if ep.url == "/redfish/v1/AccountService/Accounts" and ep.method == "POST"
+                ep
+                for ep in endpoints
+                if ep.url == "/redfish/v1/AccountService/Accounts"
+                and ep.method == "POST"
             ),
             None,
         )
@@ -54,7 +56,7 @@ class TestOpenAPIParser:
         parser = OpenAPIParser(mini_spec_path)
         output = tmp_path / "contract_a.json"
         parser.export_contract_a(output)
-        
+
         assert output.exists()
         raw_json = output.read_text(encoding="utf-8")
         reloaded = ContractA.model_validate_json(raw_json)

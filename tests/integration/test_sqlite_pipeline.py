@@ -1,11 +1,13 @@
 import pytest
 
+
 def test_workflow_persists_to_database(db_pipeline, sample_workflow):
     """1. Workflow persists to database"""
     db_pipeline.save_workflow(sample_workflow)
     stored = db_pipeline.get_workflow(sample_workflow.id)
     assert stored is not None
     assert stored.id == sample_workflow.id
+
 
 def test_approval_status_stored(db_pipeline, sample_workflow):
     """2. Approval status stored"""
@@ -14,6 +16,7 @@ def test_approval_status_stored(db_pipeline, sample_workflow):
     stored = db_pipeline.get_workflow(sample_workflow.id)
     assert stored.approved == 1
 
+
 def test_risk_level_stored(db_pipeline, sample_workflow):
     """3. Risk level stored"""
     sample_workflow.risk_level = "DESTRUCTIVE"
@@ -21,12 +24,14 @@ def test_risk_level_stored(db_pipeline, sample_workflow):
     stored = db_pipeline.get_workflow(sample_workflow.id)
     assert stored.risk_level == "DESTRUCTIVE"
 
+
 def test_version_stored(db_pipeline, sample_workflow):
     """4. Version stored"""
     sample_workflow.version = "1.0.0"
     db_pipeline.save_workflow(sample_workflow)
     stored = db_pipeline.get_workflow(sample_workflow.id)
-    assert getattr(stored, 'version', None) == "1.0.0"
+    assert getattr(stored, "version", None) == "1.0.0"
+
 
 def test_audit_log_generated(db_pipeline, sample_workflow):
     """5. Audit log generated"""
@@ -36,6 +41,7 @@ def test_audit_log_generated(db_pipeline, sample_workflow):
     assert len(logs) == initial_logs + 1
     assert logs[-1].action == "SAVE"
     assert logs[-1].workflow_id == sample_workflow.id
+
 
 def test_workflow_retrieval_works(db_pipeline, sample_workflow):
     """6. Workflow retrieval works"""

@@ -46,7 +46,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Parameter model
 # ---------------------------------------------------------------------------
@@ -129,9 +128,9 @@ class EndpointContract(BaseModel):
             "Used as the primary key in workflow_mapping.json."
         )
     )
-    method: Literal[
-        "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"
-    ] = Field(description="HTTP verb in upper-case.")
+    method: Literal["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] = Field(
+        description="HTTP verb in upper-case."
+    )
     url: str = Field(
         description=(
             "URL path template with placeholders, e.g. "
@@ -145,11 +144,21 @@ class EndpointContract(BaseModel):
             "minimise token footprint in Phase 2 clustering."
         ),
     )
-    tags: list[str] = Field(default_factory=list, description="OpenAPI tags for graph grouping.")
-    summary: str = Field(default="", description="Endpoint summary for graph embeddings.")
-    description: str = Field(default="", description="Endpoint description for graph embeddings.")
-    request_schema: dict | None = Field(default=None, description="Request schema for graph similarity.")
-    response_schema: dict | None = Field(default=None, description="Response schema for graph similarity.")
+    tags: list[str] = Field(
+        default_factory=list, description="OpenAPI tags for graph grouping."
+    )
+    summary: str = Field(
+        default="", description="Endpoint summary for graph embeddings."
+    )
+    description: str = Field(
+        default="", description="Endpoint description for graph embeddings."
+    )
+    request_schema: dict | None = Field(
+        default=None, description="Request schema for graph similarity."
+    )
+    response_schema: dict | None = Field(
+        default=None, description="Response schema for graph similarity."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -186,9 +195,7 @@ class ContractA(BaseModel):
     """
 
     spec_title: str = Field(description="info.title from the source OpenAPI spec.")
-    spec_version: str = Field(
-        description="info.version from the source OpenAPI spec."
-    )
+    spec_version: str = Field(description="info.version from the source OpenAPI spec.")
     openapi_version: str = Field(
         description="OpenAPI specification version declared in the spec file."
     )

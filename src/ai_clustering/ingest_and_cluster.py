@@ -22,7 +22,9 @@ logger = logging.getLogger(__name__)
 
 def main() -> int:
     """Run the ingestion and clustering pipeline on the provided OpenAPI specification."""
-    parser = argparse.ArgumentParser(description="Ingest and cluster OpenAPI endpoints.")
+    parser = argparse.ArgumentParser(
+        description="Ingest and cluster OpenAPI endpoints."
+    )
     parser.add_argument(
         "--spec",
         type=Path,

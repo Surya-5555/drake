@@ -1,2 +1,1 @@
 """Output contract schemas."""
-

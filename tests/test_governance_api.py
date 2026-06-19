@@ -14,7 +14,10 @@ from typing import Generator
 import pytest
 from fastapi.testclient import TestClient
 
-from src.ai_clustering.graph_clustering import build_relationship_graph, detect_communities
+from src.ai_clustering.graph_clustering import (
+    build_relationship_graph,
+    detect_communities,
+)
 from src.core.database import (
     DB_FILE,
     get_all_endpoints,
@@ -39,7 +42,7 @@ def setup_test_db() -> Generator[None, None, None]:
             os.remove(DB_FILE)
         except OSError:
             pass
-            
+
     init_db_sync()
     yield
     # Clean up test database

@@ -6,7 +6,6 @@ import yaml
 from ai_cluster.schemas.workflow import WorkflowMapping
 from ai_cluster.services.validation_service import WorkflowValidationService
 
-
 HTTP_METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
 
 
@@ -54,9 +53,7 @@ def _contract_a_from_openapi(path: Path) -> list[dict[str, object]]:
 def test_mini_openapi_fixture_drives_contract_b_validation() -> None:
     fixture_path = Path("tests/fixtures/mini_openapi.yaml")
     validation = WorkflowValidationService()
-    endpoints = validation.validate_contract_a(
-        _contract_a_from_openapi(fixture_path)
-    )
+    endpoints = validation.validate_contract_a(_contract_a_from_openapi(fixture_path))
     mapping = WorkflowMapping.model_validate(
         {
             "workflows": [

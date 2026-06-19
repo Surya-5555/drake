@@ -34,4 +34,3 @@ class FileHandler:
         with path.open("w", encoding="utf-8") as file:
             json.dump(payload, file, indent=2)
             file.write("\n")
-

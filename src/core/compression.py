@@ -3,17 +3,18 @@ from typing import Any, Dict, List, Set
 
 logger = logging.getLogger(__name__)
 
+
 def compress_redfish_response(data: Any, seen: Set[int] = None) -> Any:
     """
     Recursively compresses Dell Redfish API responses by:
     1. Stripping @odata keys (e.g., @odata.id)
     2. Removing nulls, empty strings "", and empty lists []
     3. Dropping standard HATEOAS navigation links (Links, Actions) unless explicitly needed.
-    
+
     Args:
         data: The JSON response data (dict, list, or primitive)
         seen: A set of object IDs to prevent infinite recursion
-        
+
     Returns:
         The compressed data structure, heavily reduced for LLM token context.
     """
@@ -38,11 +39,11 @@ def compress_redfish_response(data: Any, seen: Set[int] = None) -> Any:
                     continue
 
                 # 3. Drop standard HATEOAS navigation links unless they contain direct operational data.
-                # Redfish APIs extensively use "Links" and "Actions" to show what operations 
+                # Redfish APIs extensively use "Links" and "Actions" to show what operations
                 # or related objects are available. Often this blows up the payload.
                 if key in ("Links", "Actions"):
                     continue
-                    
+
                 compressed_value = compress_redfish_response(value, seen)
 
                 # 2. Remove keys that have null, empty strings "", or empty lists [] as values
@@ -56,19 +57,25 @@ def compress_redfish_response(data: Any, seen: Set[int] = None) -> Any:
                     continue
 
                 compressed_dict[key] = compressed_value
-                
+
             return compressed_dict
 
         elif isinstance(data, list):
             compressed_list = []
             for item in data:
                 compressed_item = compress_redfish_response(item, seen)
-                
+
                 # Exclude nulls, empty strings, empty lists, and empty dicts from arrays as well
-                if compressed_item is not None and compressed_item != "" and compressed_item != []:
-                    if not (isinstance(compressed_item, dict) and len(compressed_item) == 0):
+                if (
+                    compressed_item is not None
+                    and compressed_item != ""
+                    and compressed_item != []
+                ):
+                    if not (
+                        isinstance(compressed_item, dict) and len(compressed_item) == 0
+                    ):
                         compressed_list.append(compressed_item)
-                    
+
             return compressed_list
     finally:
         # Cleanup the seen set when returning up the call stack

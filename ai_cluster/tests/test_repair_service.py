@@ -23,15 +23,27 @@ def test_repair_service_removes_duplicates_and_adds_missing_apis() -> None:
                     "operation_id": "PATCH_/redfish/v1/Systems/{ComputerSystemId}",
                     "method": "PATCH",
                     "url": "/redfish/v1/Systems/{ComputerSystemId}",
-                    "required_params": [{"name": "ComputerSystemId", "location": "path", "param_type": "string"}],
+                    "required_params": [
+                        {
+                            "name": "ComputerSystemId",
+                            "location": "path",
+                            "param_type": "string",
+                        }
+                    ],
                 },
                 {
                     "operation_id": "POST_/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
                     "method": "POST",
                     "url": "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
-                    "required_params": [{"name": "X-Correlation-ID", "location": "header", "param_type": "string"}],
+                    "required_params": [
+                        {
+                            "name": "X-Correlation-ID",
+                            "location": "header",
+                            "param_type": "string",
+                        }
+                    ],
                 },
-            ]
+            ],
         }
     )
     invalid_mapping = WorkflowMapping.model_validate(

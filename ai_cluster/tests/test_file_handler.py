@@ -21,4 +21,3 @@ def test_file_handler_rejects_invalid_json(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Invalid JSON"):
         FileHandler().read_json(path)
-

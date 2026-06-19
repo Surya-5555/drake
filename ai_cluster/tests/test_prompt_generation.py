@@ -18,4 +18,3 @@ def test_prompt_contains_enterprise_architect_instructions() -> None:
     assert "Do not group solely by path similarity" in prompt
     assert "Return only JSON matching the supplied schema" in prompt
     assert "getThermal" in prompt
-
