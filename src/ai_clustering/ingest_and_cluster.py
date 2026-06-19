@@ -15,7 +15,7 @@ from pathlib import Path
 
 from src.ai_clustering.graph_clustering import run_pipeline
 from src.core.database import init_db, set_pipeline_status
-from src.parser.openapi_parser import parse_openapi_spec
+from src.parser.openapi_parser import OpenAPIParser
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,8 @@ def main() -> int:
     try:
         set_pipeline_status("ingestionStatus", "running")
         logger.info(f"Ingesting OpenAPI spec from: {spec_path}")
-        contract_a = parse_openapi_spec(spec_path)
+        parser = OpenAPIParser(spec_path)
+        contract_a = parser.parse_and_flatten()
         set_pipeline_status("ingestionStatus", "complete")
 
         set_pipeline_status("graphStatus", "running")
