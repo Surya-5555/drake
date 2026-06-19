@@ -1,0 +1,194 @@
+Pipeline Trace Log
+==================
+
+==================================================
+STAGE 1A — OPENAPI FILE STATS
+==================================================
+
+Paths Found: 5
+Operations Found: 7
+Endpoints Extracted: 7
+
+FIRST 10 ENDPOINTS:
+GET /redfish/v1
+GET /redfish/v1/Systems/{ComputerSystemId}
+PATCH /redfish/v1/Systems/{ComputerSystemId}
+POST /redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset
+GET /redfish/v1/AccountService/Accounts
+POST /redfish/v1/AccountService/Accounts
+POST /redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate
+
+LAST 10 ENDPOINTS:
+GET /redfish/v1
+GET /redfish/v1/Systems/{ComputerSystemId}
+PATCH /redfish/v1/Systems/{ComputerSystemId}
+POST /redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset
+GET /redfish/v1/AccountService/Accounts
+POST /redfish/v1/AccountService/Accounts
+POST /redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate
+
+
+
+==================================================
+ENDPOINT #1
+==================================================
+
+operation_id:
+GET_/redfish/v1
+
+method:
+GET
+
+path:
+/redfish/v1
+
+tags:
+ServiceRoot
+
+summary:
+ServiceRoot instance
+
+required_params:
+None
+
+
+==================================================
+ENDPOINT #2
+==================================================
+
+operation_id:
+GET_/redfish/v1/Systems/{ComputerSystemId}
+
+method:
+GET
+
+path:
+/redfish/v1/Systems/{ComputerSystemId}
+
+tags:
+ComputerSystem
+
+summary:
+ComputerSystem instance
+
+required_params:
+ComputerSystemId
+
+
+==================================================
+ENDPOINT #3
+==================================================
+
+operation_id:
+PATCH_/redfish/v1/Systems/{ComputerSystemId}
+
+method:
+PATCH
+
+path:
+/redfish/v1/Systems/{ComputerSystemId}
+
+tags:
+ComputerSystem
+
+summary:
+Patch system
+
+required_params:
+ComputerSystemId
+body
+
+
+==================================================
+ENDPOINT #4
+==================================================
+
+operation_id:
+POST_/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset
+
+method:
+POST
+
+path:
+/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset
+
+tags:
+ComputerSystem
+
+summary:
+Reset computer system
+
+required_params:
+ComputerSystemId
+body
+
+
+==================================================
+ENDPOINT #5
+==================================================
+
+operation_id:
+GET_/redfish/v1/AccountService/Accounts
+
+method:
+GET
+
+path:
+/redfish/v1/AccountService/Accounts
+
+tags:
+ManagerAccountCollection
+
+summary:
+ManagerAccountCollection instance
+
+required_params:
+None
+
+
+==================================================
+ENDPOINT #6
+==================================================
+
+operation_id:
+POST_/redfish/v1/AccountService/Accounts
+
+method:
+POST
+
+path:
+/redfish/v1/AccountService/Accounts
+
+tags:
+None
+
+summary:
+Create account
+
+required_params:
+body
+
+
+==================================================
+ENDPOINT #7
+==================================================
+
+operation_id:
+POST_/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate
+
+method:
+POST
+
+path:
+/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate
+
+tags:
+None
+
+summary:
+Firmware update
+
+required_params:
+X-Correlation-ID
+body
+
