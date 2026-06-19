@@ -105,3 +105,15 @@ class ContractSerializationError(ParserError):
     def __init__(self, reason: str) -> None:
         self.reason = reason
         super().__init__(f"Contract A serialisation failed: {reason}")
+
+
+class DellProxyExecutionError(DellMCPBaseError):
+    """
+    Raised when executing a proxy request fails after all retries or
+    circuit breaker transitions.
+    """
+
+    def __init__(self, message: str, original_exception: Exception | None = None) -> None:
+        self.original_exception = original_exception
+        super().__init__(message)
+

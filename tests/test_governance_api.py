@@ -21,7 +21,7 @@ from src.core.database import (
     get_db_connection,
     get_pipeline_statuses,
     get_workflows,
-    init_db,
+    init_db_sync,
     log_audit_event,
     save_endpoints,
     save_workflows,
@@ -40,7 +40,7 @@ def setup_test_db() -> Generator[None, None, None]:
         except OSError:
             pass
             
-    init_db()
+    init_db_sync()
     yield
     # Clean up test database
     if DB_FILE.exists():

@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from src.ai_clustering.graph_clustering import run_pipeline
-from src.core.database import init_db, set_pipeline_status
+from src.core.database import init_db_sync, set_pipeline_status
 from src.parser.openapi_parser import OpenAPIParser
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def main() -> int:
     )
 
     logger.info("Initializing SQLite database...")
-    init_db()
+    init_db_sync()
 
     spec_path: Path = args.spec
     if not spec_path.exists():
