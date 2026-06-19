@@ -69,12 +69,12 @@ async def execute_workflow_route(
 
 def extract_placeholders_from_steps(steps) -> Set[str]:
     """
-    Parses paths in steps to extract placeholders.
+    Parses URLs in steps to extract placeholders.
     """
     placeholders = set()
     for step in steps:
-        if step.path:
-            for match in re.findall(r"\{([a-zA-Z0-9_]+)\}", step.path):
+        if step.url:
+            for match in re.findall(r"\{([a-zA-Z0-9_]+)\}", step.url):
                 placeholders.add(match)
     return placeholders
 
@@ -87,31 +87,37 @@ async def load_approved_tools_from_db() -> None:
     async with async_session() as session:
         result = await session.execute(
             select(Workflow)
-            .where(Workflow.status == "approved")
+            .where(Workflow.approved == 1)
             .options(selectinload(Workflow.steps))
         )
         approved_wfs = result.scalars().all()
 
         for wf in approved_wfs:
-            name = wf.name
-            desc = wf.description or f"Execute clustered workflow for {name}"
+            name = wf.workflow_name
+            desc = wf.generated_description or f"Execute clustered workflow for {name}"
             param_names = list(extract_placeholders_from_steps(wf.steps))
 
-            sig_parts = [f"{p}: str = ''" for p in param_names]
-            sig = ", ".join(sig_parts)
-            dict_content = ", ".join(f"'{p}': {p}" for p in param_names)
+            def make_tool(wf_name, wf_desc, p_names):
+                import inspect
+                
+                async def dynamic_tool(**kwargs) -> dict:
+                    return await execute_workflow_route(wf_name, kwargs)
+                
+                dynamic_tool.__name__ = wf_name
+                dynamic_tool.__doc__ = wf_desc
+                
+                params = []
+                for p in p_names:
+                    params.append(inspect.Parameter(
+                        name=p,
+                        kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        default="",
+                        annotation=str
+                    ))
+                dynamic_tool.__signature__ = inspect.Signature(parameters=params)
+                return dynamic_tool
 
-            code = f"""
-async def {name}({sig}) -> dict:
-    \"\"\"{desc}\"\"\"
-    params = {{{dict_content}}}
-    return await execute_workflow_route('{name}', params)
-"""
-            local_vars: Dict[str, Any] = {}
-            global_vars = {"execute_workflow_route": execute_workflow_route}
-            exec(code, global_vars, local_vars)
-
-            dynamic_tool = local_vars[name]
+            dynamic_tool = make_tool(name, desc, param_names)
             mcp.add_tool(dynamic_tool)
             logger.info(
                 f"Dynamically registered workflow tool: {name} with params: {param_names}"
@@ -159,12 +165,12 @@ async def preview_workflow_steps(workflow_id: str) -> Dict[str, Any]:
 
         return {
             "workflow_id": workflow_id,
-            "name": wf.name,
+            "name": wf.workflow_name,
             "simulated_api_calls": [
                 {
                     "step_id": idx + 1,
                     "method": step.method,
-                    "url": step.path,
+                    "url": step.url,
                 }
                 for idx, step in enumerate(wf.steps)
             ]
@@ -211,55 +217,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# REST Webhooks
-@app.get("/workflows/pending")
-async def get_pending_workflows():
-    async with async_session() as session:
-        result = await session.execute(
-            select(Workflow)
-            .where(Workflow.status == "pending")
-            .options(selectinload(Workflow.steps))
-        )
-        pending = result.scalars().all()
-        return [
-            {
-                "id": wf.id,
-                "name": wf.name,
-                "description": wf.description,
-                "risk_level": wf.risk_level,
-                "status": wf.status,
-                "steps": [{"method": step.method, "path": step.path} for step in wf.steps]
-            }
-            for wf in pending
-        ]
-
-
-@app.post("/workflows/{id}/approve")
-async def approve_workflow(id: str):
-    async with async_session() as session:
-        result = await session.execute(select(Workflow).where(Workflow.id == id))
-        wf = result.scalar_one_or_none()
-        if not wf:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        wf.status = "approved"
-        await session.commit()
-        return {"message": f"Workflow {id} approved successfully"}
-
-
-@app.post("/workflows/{id}/reject")
-async def reject_workflow(id: str):
-    async with async_session() as session:
-        result = await session.execute(select(Workflow).where(Workflow.id == id))
-        wf = result.scalar_one_or_none()
-        if not wf:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        wf.status = "rejected"
-        await session.commit()
-        return {"message": f"Workflow {id} rejected successfully"}
-
-
-@app.post("/reload")
-async def reload():
+async def reload_mcp_tools():
     try:
         # Dynamically clear existing dynamic tools in the mcp instance
         tools = await mcp.list_tools()
@@ -287,11 +245,13 @@ async def reload():
         return {"status": "reloaded", "notified_clients": notified_count}
     except Exception as err:
         logger.exception("Reload failed")
-        raise HTTPException(status_code=500, detail=str(err))
-
+        raise err
 
 # Mount the MCP server to FastAPI using FastMCP's ASGI/SSE integration
 app.mount("/mcp", mcp.http_app(transport="sse"))
+
+# Expose reload callback to API app
+api_app.state.mcp_reload = reload_mcp_tools
 
 # Mount the governance API app
 app.mount("/", api_app)

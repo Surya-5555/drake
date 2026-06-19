@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, String, Integer, ForeignKey, Float
 
 # ===========================================================================
 # Synchronous Database Persistence (Legacy & Admin Dashboards)
@@ -105,6 +105,25 @@ def init_db_sync() -> None:
                 description TEXT NOT NULL,
                 actor TEXT NOT NULL,
                 timestamp TEXT NOT NULL
+            )
+            """
+        )
+
+        # 5. Endpoint steps
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS endpoint_steps (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workflow_id TEXT NOT NULL,
+                step_order INTEGER NOT NULL,
+                operation_id TEXT NOT NULL,
+                method TEXT NOT NULL,
+                url TEXT NOT NULL,
+                required_params TEXT NOT NULL,
+                request_schema TEXT,
+                response_schema TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
             )
             """
         )
@@ -225,6 +244,7 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
         existing = {row["id"]: dict(row) for row in cursor.fetchall()}
 
         conn.execute("DELETE FROM workflows")
+        conn.execute("DELETE FROM endpoint_steps")
         for wf in workflows_list:
             wf_id = wf["id"]
             approved = 0
@@ -258,6 +278,18 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
                     wf.get("community_id", wf_id),
                 ),
             )
+            
+            comm_id = wf.get("community_id", wf_id)
+            cursor = conn.execute("SELECT * FROM endpoints WHERE community_id = ? ORDER BY operation_id", (comm_id,))
+            eps = cursor.fetchall()
+            for i, ep in enumerate(eps):
+                conn.execute(
+                    """
+                    INSERT INTO endpoint_steps (workflow_id, step_order, operation_id, method, url, required_params, request_schema, response_schema, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (wf_id, i + 1, ep["operation_id"], ep["method"], ep["url"], ep["required_params"], None, None, datetime.now(timezone.utc).isoformat())
+                )
         conn.commit()
 
 
@@ -331,10 +363,7 @@ def get_workflows(approved_only: bool = False, pending_only: bool = False) -> Li
 # Asynchronous Database & ORM Management (SQLAlchemy)
 # ===========================================================================
 
-# Ensure output path directory exists
-ASYNC_DB_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "output"
-ASYNC_DB_DIR.mkdir(parents=True, exist_ok=True)
-ASYNC_DB_URL = f"sqlite+aiosqlite:///{ASYNC_DB_DIR}/mcp_proxy.db"
+ASYNC_DB_URL = f"sqlite+aiosqlite:///{DB_FILE}"
 
 engine = create_async_engine(ASYNC_DB_URL, echo=False)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -348,12 +377,16 @@ class Workflow(Base):
     __tablename__ = "workflows"
 
     id = Column(String, primary_key=True)
-    name = Column(String, nullable=False)
-    description = Column(String)
+    workflow_name = Column(String, nullable=False)
     risk_level = Column(String)
-    status = Column(String, default="pending")  # 'pending', 'approved', 'rejected'
+    cluster_size = Column(Integer)
+    confidence = Column(Float)
+    generated_description = Column(String)
+    approved = Column(Integer, default=0)
+    rejection_reason = Column(String)
+    community_id = Column(String)
 
-    steps = relationship("EndpointStep", back_populates="workflow", cascade="all, delete-orphan")
+    steps = relationship("EndpointStep", back_populates="workflow", cascade="all, delete-orphan", order_by="EndpointStep.step_order")
 
 
 class EndpointStep(Base):
@@ -364,8 +397,14 @@ class EndpointStep(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     workflow_id = Column(String, ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False)
+    step_order = Column(Integer, nullable=False)
+    operation_id = Column(String, nullable=False)
     method = Column(String, nullable=False)
-    path = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    required_params = Column(String, nullable=False)
+    request_schema = Column(String)
+    response_schema = Column(String)
+    created_at = Column(String, nullable=False)
 
     workflow = relationship("Workflow", back_populates="steps")
 

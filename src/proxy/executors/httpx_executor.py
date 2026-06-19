@@ -8,12 +8,14 @@ from src.core.exceptions import DellProxyExecutionError
 logger = logging.getLogger(__name__)
 
 
+import re
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
+from src.core.database import async_session, Workflow
+
 class MockHTTPXExecutor(BaseExecutor):
     """
     Execution engine that routes workflow requests to a local mock REST API server.
-
-    This executor runs asynchronously using HTTPX to prevent blocking of the event
-    loop during remote server requests, fulfilling high-performance enterprise criteria.
     """
 
     def __init__(self, base_url: str = "http://localhost:8000") -> None:
@@ -24,35 +26,22 @@ class MockHTTPXExecutor(BaseExecutor):
     ) -> Dict[str, Any]:
         """
         Executes the requested workflow steps sequentially against the mock HTTP server.
-
-        Resilience Layer & Blast Radius Mitigation Strategy:
-        ---------------------------------------------------
-        In enterprise setups, transient network interruptions, rate limiting (HTTP 429),
-        and server errors (HTTP 5xx) must not bring down the proxy ASGI event loop.
-        To handle this, we wrap the execution within an asynchronous retry wrapper utilizing
-        exponential backoff (1s base, scaling exponentially up to 10s max, capped at 3 attempts).
-        
-        Blast Radius Mitigation is achieved by:
-        1. Asynchronous Execution: Non-blocking HTTPX async client prevents event loop starvation.
-        2. Transient Error Isolation: We retry specifically on connection timeout exceptions
-           and specific HTTP status codes (429 Too Many Requests and 5xx Server Errors). Other status
-           codes (e.g. 400 Bad Request, 403 Forbidden) fail fast to avoid unnecessary load.
-        3. Custom Exception Escalation: If all retries fail, we raise a clean `DellProxyExecutionError`
-           so that the caller can handle the failure gracefully (e.g., triggering circuit breaker
-           transitions or returning clean client-facing errors) rather than exposing raw network tracebacks.
-
-        Args:
-            workflow_name: Name of the workflow.
-            params: Dictionary of input parameters.
-
-        Returns:
-            Dict[str, Any]: The execution execution summary.
-            
-        Raises:
-            DellProxyExecutionError: Raised if all retry attempts are exhausted or a non-retryable
-                                     network exception is encountered.
         """
         logger.info(f"Executing workflow '{workflow_name}' via MockHTTPXExecutor")
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(Workflow)
+                .where(Workflow.workflow_name == workflow_name)
+                .options(selectinload(Workflow.steps))
+            )
+            wf = result.scalar_one_or_none()
+            if not wf:
+                raise DellProxyExecutionError(f"Workflow '{workflow_name}' not found.")
+            
+            steps = wf.steps
+
+        step_results = []
 
         def is_retryable_status_error(exc: BaseException) -> bool:
             if isinstance(exc, httpx.HTTPStatusError):
@@ -64,39 +53,59 @@ class MockHTTPXExecutor(BaseExecutor):
             retry_if_exception(is_retryable_status_error)
         )
 
-        try:
-            async for attempt in AsyncRetrying(
-                stop=stop_after_attempt(3),
-                wait=wait_exponential(multiplier=1, min=1, max=10),
-                retry=retry_condition,
-                reraise=True
-            ):
-                with attempt:
-                    async with httpx.AsyncClient() as client:
-                        target_url = f"{self.base_url}/redfish/v1/Systems/System.Embedded.1"
-                        response = await client.get(target_url, timeout=5.0)
-                        response.raise_for_status()
+        async with httpx.AsyncClient() as client:
+            for step in steps:
+                target_url = self.base_url + step.url
 
-                        return {
-                            "executor": "MockHTTPXExecutor",
-                            "status": "success",
-                            "workflow": workflow_name,
-                            "mock_response_code": response.status_code,
-                            "data": (
-                                response.json()
-                                if response.status_code == 200
-                                else {"raw": response.text}
-                            ),
-                        }
-        except Exception as e:
-            logger.error(f"Error during MockHTTPXExecutor execution: {e}")
-            raise DellProxyExecutionError(
-                f"Workflow execution failed for '{workflow_name}' after exhausting all retry attempts.",
-                original_exception=e
-            )
+                # Substitute placeholders
+                for match in re.findall(r"\{([a-zA-Z0-9_]+)\}", step.url):
+                    if match in params:
+                        target_url = target_url.replace(f"{{{match}}}", str(params[match]))
+                
+                # Extract body parameters
+                body_params = {k: v for k, v in params.items() if f"{{{k}}}" not in step.url}
+                
+                req_kwargs = {"timeout": 5.0}
+                if step.method.lower() in ["post", "put", "patch"] and body_params:
+                    req_kwargs["json"] = body_params
 
-        raise DellProxyExecutionError(
-            f"Workflow execution failed for '{workflow_name}' after exhausting all retry attempts."
-        )
+                try:
+                    async for attempt in AsyncRetrying(
+                        stop=stop_after_attempt(3),
+                        wait=wait_exponential(multiplier=1, min=1, max=10),
+                        retry=retry_condition,
+                        reraise=True
+                    ):
+                        with attempt:
+                            response = await client.request(
+                                step.method.upper(), target_url, **req_kwargs
+                            )
+                            response.raise_for_status()
+
+                            try:
+                                data = response.json()
+                            except ValueError:
+                                data = {"raw": response.text}
+
+                            step_results.append({
+                                "step_id": step.id,
+                                "method": step.method.upper(),
+                                "url": target_url,
+                                "status_code": response.status_code,
+                                "data": data
+                            })
+                except Exception as e:
+                    logger.error(f"Error during step '{step.url}' execution: {e}")
+                    raise DellProxyExecutionError(
+                        f"Workflow step execution failed for '{workflow_name}' on '{step.url}' after exhausting retries.",
+                        original_exception=e
+                    )
+
+        return {
+            "workflow_id": wf.id,
+            "status": "success",
+            "steps_executed": len(step_results),
+            "step_results": step_results
+        }
 
 
