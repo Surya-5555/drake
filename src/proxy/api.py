@@ -453,11 +453,15 @@ async def get_metrics() -> Dict[str, Any]:
                 else 0.0
             )
 
-            raw_tokens = raw_endpoint_count * 400
-            clustered_tokens = workflow_count * 200
+            # Calculate actual tokens using length heuristic (len // 4)
+            raw_tokens = sum(len(str(ep["request_schema"] or "")) // 4 + len(str(ep["response_schema"] or "")) // 4 for ep in eps)
+            clustered_tokens = sum(len(str(wf["generated_description"] or "")) // 4 for wf in wfs)
+            
+            # Avoid divide by zero
+            raw_tokens = max(raw_tokens, 1)
             token_savings = (
                 round((1 - (clustered_tokens / raw_tokens)) * 100, 1)
-                if raw_tokens > 0
+                if raw_tokens > clustered_tokens
                 else 0.0
             )
 
@@ -547,9 +551,19 @@ async def prometheus_metrics():
             token_savings = 0.0
             coverage = 0.0
         else:
-            raw_tokens = endpoint_count * 400
-            clustered_tokens = total_workflows * 200
-            token_savings = (1 - (clustered_tokens / raw_tokens)) * 100 if raw_tokens > 0 else 0.0
+            # Calculate actual tokens using length heuristic
+            async with aiosqlite.connect(DB_FILE) as db:
+                db.row_factory = aiosqlite.Row
+                async with db.execute("SELECT request_schema, response_schema FROM endpoints") as c:
+                    eps = await c.fetchall()
+                async with db.execute("SELECT generated_description FROM workflows") as c:
+                    wfs = await c.fetchall()
+                    
+            raw_tokens = sum(len(str(ep["request_schema"] or "")) // 4 + len(str(ep["response_schema"] or "")) // 4 for ep in eps)
+            clustered_tokens = sum(len(str(wf["generated_description"] or "")) // 4 for wf in wfs)
+            
+            raw_tokens = max(raw_tokens, 1)
+            token_savings = (1 - (clustered_tokens / raw_tokens)) * 100 if raw_tokens > clustered_tokens else 0.0
             
             async with aiosqlite.connect(DB_FILE) as db:
                 async with db.execute("SELECT COUNT(*) FROM endpoints WHERE community_id IS NOT NULL") as c:
