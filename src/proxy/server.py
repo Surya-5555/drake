@@ -114,7 +114,7 @@ async def load_approved_tools_from_db() -> None:
                         default="",
                         annotation=str
                     ))
-                dynamic_tool.__signature__ = inspect.Signature(parameters=params)
+                dynamic_tool.__signature__ = inspect.Signature(parameters=params)  # type: ignore
                 return dynamic_tool
 
             dynamic_tool = make_tool(name, desc, param_names)

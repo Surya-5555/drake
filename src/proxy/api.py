@@ -103,7 +103,7 @@ class RejectWorkflowPayload(BaseModel):
 
 
 async def log_audit_event_async(
-    event_type: str, status: str, description: str, workflow_name: str = None, actor: str = "system"
+    event_type: str, status: str, description: str, workflow_name: Optional[str] = None, actor: str = "system"
 ):
     import uuid
     async with aiosqlite.connect(DB_FILE) as db:
@@ -132,7 +132,8 @@ async def get_overview() -> Dict[str, Any]:
             db.row_factory = aiosqlite.Row
             
             async with db.execute("SELECT COUNT(*) as c FROM endpoints") as c:
-                endpoint_count = (await c.fetchone())["c"]
+                row = await c.fetchone()
+                endpoint_count = row["c"] if row else 0
                 
             async with db.execute("SELECT approved, COUNT(*) as c FROM workflows GROUP BY approved") as c:
                 wf_counts = await c.fetchall()
@@ -253,6 +254,9 @@ async def update_workflow(workflow_id: str, payload: UpdateWorkflowPayload) -> D
         async with db.execute("SELECT * FROM workflows WHERE id = ?", (workflow_id,)) as c:
             updated_wf = await c.fetchone()
 
+        if not updated_wf:
+            raise HTTPException(status_code=404, detail="Workflow not found after update")
+
     await log_audit_event_async(
         "workflow_updated", "success",
         f"Updated name to '{payload.workflowName}' and description.",
@@ -309,11 +313,11 @@ async def get_graph() -> Dict[str, Any]:
         async with aiosqlite.connect(DB_FILE) as db:
             db.row_factory = aiosqlite.Row
             async with db.execute("SELECT * FROM endpoints") as c:
-                eps = await c.fetchall()
+                eps = list(await c.fetchall())
             async with db.execute("SELECT * FROM edges") as c:
-                edges = await c.fetchall()
+                edges = list(await c.fetchall())
             async with db.execute("SELECT * FROM workflows") as c:
-                wfs = await c.fetchall()
+                wfs = list(await c.fetchall())
 
         nodes_list = [{
             "id": ep["operation_id"],
@@ -347,9 +351,9 @@ async def get_metrics() -> Dict[str, Any]:
         async with aiosqlite.connect(DB_FILE) as db:
             db.row_factory = aiosqlite.Row
             async with db.execute("SELECT * FROM endpoints") as c:
-                eps = await c.fetchall()
+                eps = list(await c.fetchall())
             async with db.execute("SELECT * FROM workflows") as c:
-                wfs = await c.fetchall()
+                wfs = list(await c.fetchall())
 
         raw_endpoint_count = len(eps)
         workflow_count = len(wfs)
@@ -418,7 +422,7 @@ async def sync_workflow_mappings_async() -> None:
         async with aiosqlite.connect(DB_FILE) as db:
             db.row_factory = aiosqlite.Row
             async with db.execute("SELECT * FROM workflows WHERE approved = 1") as c:
-                approved_wfs = await c.fetchall()
+                approved_wfs = list(await c.fetchall())
 
             steps_mapping = {}
             for wf in approved_wfs:

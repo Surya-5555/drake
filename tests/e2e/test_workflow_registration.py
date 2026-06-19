@@ -32,7 +32,7 @@ def test_dynamic_tool_registration():
                 default="",
                 annotation=str
             ))
-        dynamic_tool.__signature__ = inspect.Signature(parameters=params)
+        dynamic_tool.__signature__ = inspect.Signature(parameters=params)  # type: ignore
         return dynamic_tool
         
     tool = make_tool("test_wf", "desc", ["sys_id", "proc_id"])
