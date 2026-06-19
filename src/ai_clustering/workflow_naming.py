@@ -75,4 +75,29 @@ def generate_system_name(endpoints: List[Dict[str, Any]]) -> str:
         
     system_name = f"{base}_{action}"
     
+    from src.ai_clustering.explain import is_explain_mode, explain_print
+    if is_explain_mode():
+        path_tokens_log = "\n".join(segments) if segments else "none"
+        tag_tokens_log = "\n".join(tags) if tags else "none"
+        
+        all_tokens = tags + segments
+        counter = Counter(all_tokens)
+        token_freq_log = "\n".join(f"{t}: {c}" for t, c in counter.most_common(5)) if counter else "none"
+        
+        selected_tokens_log = f"{base}\n{action}"
+        
+        # Get community_id from the first endpoint if available, else 'unknown'
+        comm_id = endpoints[0].get("community_id", "Unknown") if endpoints else "Unknown"
+        # The community_id might not be set yet when generate_system_name is called, but we can try
+        
+        content = (
+            f"Community:\n{comm_id.replace('wf_', '')}\n\n"
+            f"Path Tokens:\n\n{path_tokens_log}\n\n"
+            f"Tag Tokens:\n\n{tag_tokens_log}\n\n"
+            f"Token Frequencies:\n\n{token_freq_log}\n\n"
+            f"Selected Tokens:\n\n{selected_tokens_log}\n\n"
+            f"Generated System Name:\n\n{system_name}"
+        )
+        explain_print("SYSTEM NAME GENERATION", content)
+    
     return system_name

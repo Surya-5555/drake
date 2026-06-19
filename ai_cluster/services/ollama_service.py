@@ -69,6 +69,10 @@ class OllamaService:
         if not isinstance(content, str) or not content.strip():
             raise OllamaServiceError("Ollama returned an empty response")
 
+        from src.ai_clustering.explain import is_explain_mode, explain_print
+        if is_explain_mode():
+            explain_print("RAW OLLAMA RESPONSE", content)
+
         try:
             parsed = json.loads(content)
         except json.JSONDecodeError as exc:

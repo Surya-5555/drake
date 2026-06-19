@@ -111,10 +111,37 @@ class EmbeddingService:
             return np.array([])
 
         texts = [self.format_endpoint_text(ep) for ep in endpoints]
+        
+        from src.ai_clustering.explain import is_explain_mode, explain_print
+        if is_explain_mode():
+            for ep, text in zip(endpoints, texts):
+                content = f"Operation:\n{ep['operation_id']}\n\nText Sent To Model:\n\n{text}\n\n{'-'*50}"
+                explain_print("EMBEDDING INPUT", content)
+
         model = self._get_model()
 
         # Generate embeddings (returns a numpy array or torch tensor)
         embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+        
+        if is_explain_mode():
+            for ep, vec in zip(endpoints, embeddings):
+                dim = len(vec)
+                first_20 = [round(float(x), 3) for x in vec[:20]]
+                norm = round(float(np.linalg.norm(vec)), 2)
+                content = (
+                    f"Operation:\n{ep['operation_id']}\n\n"
+                    f"Dimension:\n{dim}\n\n"
+                    f"First 20 Values:\n\n{first_20}\n\n"
+                    f"Vector Norm:\n{norm}\n\n{'-'*50}"
+                )
+                explain_print("EMBEDDING GENERATED", content)
+            
+            summary = (
+                f"Total vectors:\n{len(endpoints)}\n\n"
+                f"Embedding dimension:\n{embeddings.shape[1]}"
+            )
+            explain_print("EMBEDDING GENERATED SUMMARY", summary)
+            
         return embeddings
 
     def compute_similarity_matrix(self, embeddings: np.ndarray) -> np.ndarray:
