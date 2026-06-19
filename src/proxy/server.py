@@ -59,15 +59,20 @@ async def execute_workflow_route(
     """
     Routes execution to the designated executor selected by env configuration.
     """
-    executor_type = os.getenv("DELL_EXECUTOR_TYPE", "httpx").lower()
+    from src.proxy.executors.httpx_executor import PrismExecutor, MockExecutor
+    from src.proxy.executors.dell_omsdk_executor import DellOMSDKExecutor
+
+    executor_type = os.getenv("DELL_EXECUTOR_TYPE", "prism").lower()
     executor: BaseExecutor
 
     if executor_type == "omsdk":
         executor = DellOMSDKExecutor()
+    elif executor_type == "prism":
+        prism_url = os.getenv("PRISM_URL", "http://localhost:4010")
+        executor = PrismExecutor(base_url=prism_url)
     else:
-        # Default/Fallback to MockHTTPXExecutor
         mock_server_url = os.getenv("MOCK_SERVER_URL", "http://localhost:8000")
-        executor = MockHTTPXExecutor(base_url=mock_server_url)
+        executor = MockExecutor(base_url=mock_server_url)
 
     return await executor.execute_workflow(workflow_name, params)
 
@@ -89,6 +94,11 @@ async def load_approved_tools_from_db() -> None:
     Queries the SQLite DB for workflows where status == 'approved',
     iterates through them, and registers them dynamically using mcp.add_tool().
     """
+    import json
+    from pydantic import create_model, Field
+    from src.proxy.executors.httpx_executor import PrismExecutor, MockExecutor
+    from src.proxy.executors.dell_omsdk_executor import DellOMSDKExecutor
+
     async with async_session() as session:
         result = await session.execute(
             select(Workflow)
@@ -99,38 +109,75 @@ async def load_approved_tools_from_db() -> None:
 
         for wf in approved_wfs:
             name = wf.system_name
+
+            # Build complete parameter signature from all steps
+            all_params = {}
+            schemas_doc = []
+
+            for step in wf.steps:
+                try:
+                    req_params = json.loads(step.required_params) if step.required_params else []
+                    for p in req_params:
+                        p_name = p.get("name")
+                        if p_name and p_name != "body":
+                            # Map primitive types
+                            p_type = str
+                            if p.get("param_type") == "integer": p_type = int
+                            elif p.get("param_type") == "boolean": p_type = bool
+                            all_params[p_name] = (p_type, ... if p.get("required", True) else None)
+                except Exception:
+                    pass
+
+                try:
+                    if step.request_schema:
+                        schema = json.loads(step.request_schema)
+                        schemas_doc.append(f"
+Step {step.step_order} ({step.method} {step.url}) Body Schema:
+{json.dumps(schema, indent=2)}")
+                        # Extract top-level properties from schema and add to parameters
+                        if schema.get("type") == "object" and "properties" in schema:
+                            for prop, details in schema["properties"].items():
+                                if prop not in all_params:
+                                    all_params[prop] = (Any, None) # Allow passing any JSON structure for body params
+                except Exception:
+                    pass
+
+            # Extend description with body schemas
             desc = wf.generated_description or f"Execute clustered workflow for {name}"
-            param_names = list(extract_placeholders_from_steps(wf.steps))
+            if schemas_doc:
+                desc += "
 
-            def make_tool(wf_name, wf_desc, p_names):
-                import inspect
+### Required Request Body Structures:
+" + "
+".join(schemas_doc)
 
+            # Use inspect.Signature to create dynamic kwargs
+            import inspect
+            def make_tool(wf_name, wf_desc, params_dict):
                 async def dynamic_tool(**kwargs) -> dict:
                     return await execute_workflow_route(wf_name, kwargs)
 
                 dynamic_tool.__name__ = wf_name
                 dynamic_tool.__doc__ = wf_desc
 
-                params = []
-                for p in p_names:
-                    params.append(
+                sig_params = []
+                for k, (t, default) in params_dict.items():
+                    sig_params.append(
                         inspect.Parameter(
-                            name=p,
+                            name=k,
                             kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                            default="",
-                            annotation=str,
+                            default=inspect.Parameter.empty if default is ... else default,
+                            annotation=t,
                         )
                     )
-                dynamic_tool.__signature__ = inspect.Signature(parameters=params)  # type: ignore
-                dynamic_tool.__annotations__ = {p: str for p in p_names}
+                dynamic_tool.__signature__ = inspect.Signature(parameters=sig_params)
+                dynamic_tool.__annotations__ = {k: t for k, (t, d) in params_dict.items()}
                 dynamic_tool.__annotations__["return"] = dict
                 return dynamic_tool
 
-            dynamic_tool = make_tool(name, desc, param_names)
+            dynamic_tool = make_tool(name, desc, all_params)
             mcp.add_tool(dynamic_tool)
-            logger.info(
-                f"Dynamically registered workflow tool: {name} with params: {param_names}"
-            )
+            logger.info(f"Dynamically registered workflow tool: {name} with schema params: {list(all_params.keys())}")
 
 
 @mcp.tool()

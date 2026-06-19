@@ -83,6 +83,9 @@ class RequiredParameter(BaseModel):
             "Defaults to 'string' for untyped parameters."
         ),
     )
+    required: bool = Field(
+        default=True, description="Whether the parameter is required."
+    )
 
 
 # ---------------------------------------------------------------------------
