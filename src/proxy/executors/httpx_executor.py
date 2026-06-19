@@ -10,6 +10,7 @@ from tenacity import (
 )
 from src.proxy.executors.base import BaseExecutor
 from src.core.exceptions import DellProxyExecutionError
+from src.core.compression import compress_redfish_response
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,7 @@ class MockHTTPXExecutor(BaseExecutor):
 
                             try:
                                 data = response.json()
+                                data = compress_redfish_response(data)
                             except ValueError:
                                 data = {"raw": response.text}
 

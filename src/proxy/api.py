@@ -517,6 +517,145 @@ async def get_audit_events() -> List[Dict[str, Any]]:
         raise HTTPException(status_code=500, detail=str(err))
 
 
+@app.get("/metrics")
+async def prometheus_metrics():
+    from fastapi.responses import PlainTextResponse
+    try:
+        async with aiosqlite.connect(DB_FILE) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("SELECT COUNT(*) as c FROM endpoints") as c:
+                row = await c.fetchone()
+                endpoint_count = row["c"] if row else 0
+
+            async with db.execute("SELECT approved, COUNT(*) as c FROM workflows GROUP BY approved") as c:
+                wf_counts = await c.fetchall()
+
+        pending = 0
+        approved = 0
+        rejected = 0
+        for row in wf_counts:
+            if row["approved"] == 0:
+                pending = row["c"]
+            elif row["approved"] == 1:
+                approved = row["c"]
+            elif row["approved"] == 2:
+                rejected = row["c"]
+
+        total_workflows = pending + approved + rejected
+
+        if total_workflows == 0:
+            token_savings = 0.0
+            coverage = 0.0
+        else:
+            raw_tokens = endpoint_count * 400
+            clustered_tokens = total_workflows * 200
+            token_savings = (1 - (clustered_tokens / raw_tokens)) * 100 if raw_tokens > 0 else 0.0
+            
+            async with aiosqlite.connect(DB_FILE) as db:
+                async with db.execute("SELECT COUNT(*) FROM endpoints WHERE community_id IS NOT NULL") as c:
+                    row = await c.fetchone()
+                    clustered_endpoints = row[0] if row else 0
+            coverage = (clustered_endpoints / endpoint_count) * 100 if endpoint_count > 0 else 0.0
+
+        lines = [
+            "# HELP dell_mcp_endpoints_total Total number of ingested OpenAPI endpoints.",
+            "# TYPE dell_mcp_endpoints_total gauge",
+            f"dell_mcp_endpoints_total {endpoint_count}",
+            "# HELP dell_mcp_workflows_total Total number of discovered workflows.",
+            "# TYPE dell_mcp_workflows_total gauge",
+            f"dell_mcp_workflows_total {total_workflows}",
+            "# HELP dell_mcp_workflows_approved_total Total number of approved workflows.",
+            "# TYPE dell_mcp_workflows_approved_total gauge",
+            f"dell_mcp_workflows_approved_total {approved}",
+            "# HELP dell_mcp_workflows_pending_total Total number of pending workflows.",
+            "# TYPE dell_mcp_workflows_pending_total gauge",
+            f"dell_mcp_workflows_pending_total {pending}",
+            "# HELP dell_mcp_workflows_rejected_total Total number of rejected workflows.",
+            "# TYPE dell_mcp_workflows_rejected_total gauge",
+            f"dell_mcp_workflows_rejected_total {rejected}",
+            "# HELP dell_mcp_token_savings_percent Estimated LLM context token savings percentage.",
+            "# TYPE dell_mcp_token_savings_percent gauge",
+            f"dell_mcp_token_savings_percent {token_savings:.2f}",
+            "# HELP dell_mcp_clustering_coverage_percent Percentage of endpoints successfully clustered.",
+            "# TYPE dell_mcp_clustering_coverage_percent gauge",
+            f"dell_mcp_clustering_coverage_percent {coverage:.2f}"
+        ]
+        return PlainTextResponse("\n".join(lines) + "\n")
+    except Exception as err:
+        logger.error(f"Prometheus metrics generation failed: {err}")
+        raise HTTPException(status_code=500, detail=str(err))
+
+
+@app.get("/api/v1/workflows/{workflow_id}/export/ansible")
+async def export_workflow_ansible(workflow_id: str):
+    import yaml
+    from fastapi.responses import PlainTextResponse
+    try:
+        async with aiosqlite.connect(DB_FILE) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                "SELECT * FROM workflows WHERE id = ?", (workflow_id,)
+            ) as c:
+                wf = await c.fetchone()
+
+            if not wf:
+                raise HTTPException(status_code=404, detail="Workflow not found")
+
+            # Load steps
+            async with db.execute(
+                "SELECT * FROM endpoint_steps WHERE workflow_id = ? ORDER BY step_order",
+                (workflow_id,),
+            ) as c:
+                steps = await c.fetchall()
+
+        tasks = []
+        for idx, step in enumerate(steps):
+            task_data = {
+                "name": f"Step {idx + 1} - {step['method'].upper()} {step['url']}",
+                "ansible.builtin.uri": {
+                    "url": f"https://{{{{ idrac_ip }}}}{step['url']}",
+                    "method": step["method"].upper(),
+                    "user": "{{ idrac_user }}",
+                    "password": "{{ idrac_password }}",
+                    "force_basic_auth": True,
+                    "validate_certs": False,
+                    "status_code": [200, 201, 202, 204],
+                }
+            }
+            if step["method"].upper() in ["POST", "PATCH", "PUT"]:
+                task_data["ansible.builtin.uri"]["body_format"] = "json"
+                task_data["ansible.builtin.uri"]["body"] = {
+                    "Target": "Example"
+                }
+            task_data["register"] = f"step_{idx + 1}_result"
+            tasks.append(task_data)
+
+        playbook = [
+            {
+                "name": f"Dell MCP Workflow Playbook: {wf['display_name']}",
+                "hosts": "idrac_servers",
+                "gather_facts": False,
+                "vars": {
+                    "idrac_ip": "192.168.1.100",
+                    "idrac_user": "root",
+                    "idrac_password": "calvin"
+                },
+                "tasks": tasks
+            }
+        ]
+
+        yaml_content = yaml.dump(playbook, sort_keys=False)
+        return PlainTextResponse(
+            yaml_content,
+            headers={
+                "Content-Disposition": f"attachment; filename=workflow_{wf['system_name']}.yml"
+            }
+        )
+    except Exception as err:
+        logger.error(f"Ansible export failed: {err}")
+        raise HTTPException(status_code=500, detail=str(err))
+
+
 async def sync_workflow_mappings_async() -> None:
     try:
         async with aiosqlite.connect(DB_FILE) as db:
