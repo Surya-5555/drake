@@ -39,6 +39,46 @@ class OpenAPIParser:
             logger.error(f"Failed to parse OpenAPI spec: {str(e)}")
             raise
 
+    def _resolve_refs(self, schema: Any, root_spec: Dict[str, Any], depth: int = 0) -> Any:
+        """Recursively resolves OpenAPI $ref pointers and merges allOf/oneOf/anyOf schemas."""
+        if depth > 5:
+            return schema  # Prevent infinite recursive cycles
+            
+        if isinstance(schema, dict):
+            # Resolve $ref first
+            if "$ref" in schema:
+                ref_path = schema["$ref"]
+                if ref_path.startswith("#/"):
+                    parts = ref_path.split("/")[1:]
+                    resolved = root_spec
+                    for part in parts:
+                        resolved = resolved.get(part, {})
+                    return self._resolve_refs(resolved, root_spec, depth + 1)
+                return schema
+                
+            resolved_dict = {}
+            for k, v in schema.items():
+                if k in ["allOf", "oneOf", "anyOf"] and isinstance(v, list):
+                    # Combine sub-schemas into the current dictionary
+                    combined_props = {}
+                    for sub in v:
+                        resolved_sub = self._resolve_refs(sub, root_spec, depth + 1)
+                        if isinstance(resolved_sub, dict):
+                            # Simplistic merge of properties
+                            props = resolved_sub.get("properties", {})
+                            combined_props.update(props)
+                    if combined_props:
+                        if "properties" not in resolved_dict:
+                            resolved_dict["properties"] = {}
+                        resolved_dict["properties"].update(combined_props)
+                else:
+                    resolved_dict[k] = self._resolve_refs(v, root_spec, depth)
+            return resolved_dict
+            
+        elif isinstance(schema, list):
+            return [self._resolve_refs(item, root_spec, depth) for item in schema]
+        return schema
+
     def parse_and_flatten(self) -> ContractA:
         """
         Flattens the OpenAPI paths into a ContractA object.
@@ -115,6 +155,9 @@ class OpenAPIParser:
                     .get("application/json", {})
                     .get("schema")
                 )
+                if request_schema:
+                    request_schema = self._resolve_refs(request_schema, spec)
+
                 response_schema = (
                     operation.get("responses", {})
                     .get("200", {})
@@ -122,6 +165,8 @@ class OpenAPIParser:
                     .get("application/json", {})
                     .get("schema")
                 )
+                if response_schema:
+                    response_schema = self._resolve_refs(response_schema, spec)
 
                 endpoint = EndpointContract(
                     operation_id=operation.get(

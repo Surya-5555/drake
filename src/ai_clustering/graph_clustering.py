@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Set, Tuple
 import networkx as nx
 
 from src.core.models import ContractA
+from src.ai_clustering.explain import is_explain_mode, explain_print
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
     Constructs a NetworkX graph from a list of Contract A endpoints.
 
     Nodes represent individual OpenAPI endpoints.
-    Edges are created using semantic embedding similarity (Hybrid Threshold + Top-K).
+    Edges are created using semantic embedding similarity (Hybrid Threshold).
     """
     from src.ai_clustering.embedding_service import EmbeddingService
     import numpy as np
@@ -50,124 +51,201 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
         )
         sim_matrix = np.zeros((len(endpoints), len(endpoints)))
 
-    def compute_path_similarity(url_a: str, url_b: str) -> float:
-        parts_a = [p for p in url_a.split("/") if p and p.lower() not in ("redfish", "v1", "api")]
-        parts_b = [p for p in url_b.split("/") if p and p.lower() not in ("redfish", "v1", "api")]
-        if not parts_a and not parts_b:
-            return 1.0
-        if not parts_a or not parts_b:
-            return 0.0
-        shared = 0
-        for a, b in zip(parts_a, parts_b):
-            if a == b:
-                shared += 1
-            else:
-                break
-        return float(shared) / max(len(parts_a), len(parts_b))
-
-    def compute_tag_similarity(tags_a: List[str], tags_b: List[str]) -> float:
-        set_a = set(tags_a)
-        set_b = set(tags_b)
-        if not set_a or not set_b:
-            return 0.0
-        union = len(set_a.union(set_b))
-        return float(len(set_a.intersection(set_b))) / union if union > 0 else 0.0
-
-    # Hybrid Threshold + Top-K for edges
-    # For each node, find the top 10 most similar nodes (excluding self) with similarity > 0.50
-    k = 10
-    threshold = 0.50
     num_nodes = len(endpoints)
+    if num_nodes == 0:
+        return G
 
-    for i in range(num_nodes):
-        op_id_i = endpoints[i]["operation_id"]
-        tags_i = endpoints[i].get("tags") or []
-        if isinstance(tags_i, str):
-            tags_i = [tags_i]
-        url_i = endpoints[i].get("url", "")
+    # Pre-tokenize URLs and Tags
+    vocab = {}
+    path_arrays = []
+    tags_list = []
+    all_tags = set()
+    
+    for ep in endpoints:
+        # url tokenization
+        parts = [p for p in ep.get("url", "").split("/") if p and p.lower() not in ("redfish", "v1", "api")]
+        encoded = []
+        for p in parts:
+            if p not in vocab: vocab[p] = len(vocab)
+            encoded.append(vocab[p])
+        path_arrays.append(encoded)
+        
+        # tags
+        tags = ep.get("tags") or []
+        if isinstance(tags, str): tags = [tags]
+        tags_list.append(set(tags))
+        all_tags.update(tags)
 
-        final_weights = np.zeros(num_nodes)
-
-        for j in range(num_nodes):
-            if i == j:
-                final_weights[j] = 0.0
-                continue
-
-            semantic_score = float(sim_matrix[i][j])
-
-            tags_j = endpoints[j].get("tags") or []
-            if isinstance(tags_j, str):
-                tags_j = [tags_j]
-            tag_score = compute_tag_similarity(tags_i, tags_j)
-
-            url_j = endpoints[j].get("url", "")
-            path_score = compute_path_similarity(url_i, url_j)
-
-            final_weight = (
-                (semantic_score * 0.6) + (tag_score * 0.25) + (path_score * 0.15)
-            )
-            final_weights[j] = final_weight
-        from src.ai_clustering.explain import is_explain_mode, explain_print
-
-        # Get indices of top k elements
-        if num_nodes - 1 < k:
-            top_k_indices = np.argsort(final_weights)[::-1]
-            top_k_indices = [idx for idx in top_k_indices if idx != i]
-        else:
-            top_k_indices = np.argsort(final_weights)[::-1][1 : k + 1]
-
-        if is_explain_mode() and num_nodes > 1:
-            # Sort all neighbors to log top neighbors for STAGE 4
-            all_sorted_indices = np.argsort(final_weights)[::-1]
-            top_neighbors_log = ""
-            for rank, n_idx in enumerate(all_sorted_indices[:5], 1): # show top 5
-                if n_idx == i:
-                    continue
-                s_score = float(sim_matrix[i][n_idx])
-                t_score = compute_tag_similarity(tags_i, endpoints[n_idx].get("tags", []))
-                p_score = compute_path_similarity(url_i, endpoints[n_idx].get("url", ""))
-                f_score = final_weights[n_idx]
-                
-                accepted = "YES" if f_score > threshold and n_idx in top_k_indices else "NO"
-                
-                top_neighbors_log += (
-                    f"Endpoint:\n{op_id_i}\n\n"
-                    f"Neighbor:\n{endpoints[n_idx]['operation_id']}\n\n"
-                    f"Semantic:\n{s_score:.2f}\n\n"
-                    f"Path:\n{p_score:.2f}\n\n"
-                    f"Tag:\n{t_score:.2f}\n\n"
-                    f"Final:\n{f_score:.2f}\n\n"
-                    f"Accepted:\n{accepted}\n\n"
-                )
-            explain_print(f"NEAREST NEIGHBORS FOR {op_id_i}", top_neighbors_log.strip())
-
-        for j in top_k_indices:
-            weight = final_weights[j]
-            op_id_j = endpoints[j]["operation_id"]
+    # 1. TAG SIMILARITY (Vectorized Jaccard)
+    all_tags = list(all_tags)
+    tag_to_idx = {t: i for i, t in enumerate(all_tags)}
+    tag_matrix = np.zeros((num_nodes, len(all_tags)), dtype=bool)
+    for i, tags in enumerate(tags_list):
+        for t in tags:
+            tag_matrix[i, tag_to_idx[t]] = True
             
-            if weight > threshold:
-                # networkx Graph is undirected, so adding (i, j) or (j, i) is the same.
-                if not G.has_edge(op_id_i, op_id_j):
-                    G.add_edge(op_id_i, op_id_j, weight=float(weight))
-                else:
-                    # Keep the max weight if there's asymmetry
-                    G[op_id_i][op_id_j]["weight"] = max(
-                        G[op_id_i][op_id_j]["weight"], float(weight)
-                    )
+    intersection = np.dot(tag_matrix.astype(int), tag_matrix.T.astype(int))
+    sum_tags = tag_matrix.sum(axis=1)
+    union = sum_tags[:, None] + sum_tags[None, :] - intersection
+    with np.errstate(divide='ignore', invalid='ignore'):
+        tag_sim_matrix = np.where(union > 0, intersection / union, 0.0)
+
+    # 2. PATH SIMILARITY (Vectorized)
+    max_len = max((len(p) for p in path_arrays), default=0)
+    if max_len == 0:
+        path_sim_matrix = np.ones((num_nodes, num_nodes))
+    else:
+        P = np.full((num_nodes, max_len), -1, dtype=int)
+        for i, p in enumerate(path_arrays):
+            if p:
+                P[i, :len(p)] = p
+                
+        len_P = np.array([len(p) for p in path_arrays])
+        
+        # Domain match
+        domain_match = np.where((P[:, 0:1] == P[None, :, 0]) & (P[:, 0:1] != -1), 0.2, 0.0)
+        
+        # Shared prefix computation
+        match_matrix = (P[:, None, :] == P[None, :, :]) & (P[:, None, :] != -1)
+        prefix_match = np.minimum.accumulate(match_matrix, axis=2)
+        shared_counts = prefix_match.sum(axis=2)
+        
+        # Max lengths
+        max_lens = np.maximum(len_P[:, None], len_P[None, :])
+        
+        # Base score
+        with np.errstate(divide='ignore', invalid='ignore'):
+            base_score = np.where(max_lens > 0, shared_counts / max_lens, 1.0)
+            
+        # is_prefix bool
+        is_prefix_a_in_b = shared_counts == len_P[None, :]
+        is_prefix_b_in_a = shared_counts == len_P[:, None]
+        is_prefix = is_prefix_a_in_b | is_prefix_b_in_a
+        
+        # is_sibling bool
+        is_same_len = len_P[:, None] == len_P[None, :]
+        is_sibling = (len_P[:, None] > 1) & is_same_len & (shared_counts == len_P[:, None] - 1)
+        
+        # Applying max thresholds
+        mask_prefix = is_prefix & (shared_counts >= 1)
+        base_score = np.where(mask_prefix, np.maximum(base_score, 0.8), base_score)
+        
+        mask_sibling = is_sibling & (shared_counts >= 1)
+        base_score = np.where(mask_sibling & ~mask_prefix, np.maximum(base_score, 0.65), base_score)
+        
+        path_sim_matrix = np.clip(base_score + domain_match, 0.0, 1.0)
+        
+        # Handle cases where len_a == 0 or len_b == 0
+        zero_len_mask = (len_P[:, None] == 0) | (len_P[None, :] == 0)
+        path_sim_matrix = np.where(zero_len_mask, 0.0, path_sim_matrix)
+        both_zero_mask = (len_P[:, None] == 0) & (len_P[None, :] == 0)
+        path_sim_matrix = np.where(both_zero_mask, 1.0, path_sim_matrix)
+
+    # 3. Final weighting
+    final_weights = (sim_matrix * 0.25) + (tag_sim_matrix * 0.25) + (path_sim_matrix * 0.50)
+
+    # Extract upper triangle scores for Thresholding
+    triu_idx = np.triu_indices(num_nodes, k=1)
+    all_scores = final_weights[triu_idx]
+
+    # Phase 4 - Automatic Threshold Discovery
+    if len(all_scores) > 0:
+        p75 = np.percentile(all_scores, 75)
+        p80 = np.percentile(all_scores, 80)
+        p85 = np.percentile(all_scores, 85)
+        p90 = np.percentile(all_scores, 90)
+        p95 = np.percentile(all_scores, 95)
+        
+        # We cap the threshold between 0.50 and 0.70 to ensure groups form
+        threshold = max(0.50, min(0.70, p85))
+    else:
+        threshold = 0.50
+        p75 = p80 = p85 = p90 = p95 = 0.0
+        
+    G.graph["threshold"] = threshold
+
+    if is_explain_mode() and all_scores:
+        content_thresh = (
+            f"Mean: {np.mean(all_scores):.3f}\n"
+            f"Median: {np.median(all_scores):.3f}\n"
+            f"p75: {p75:.3f}\n"
+            f"p80: {p80:.3f}\n"
+            f"p85: {p85:.3f}\n"
+            f"p90: {p90:.3f}\n"
+            f"p95: {p95:.3f}\n\n"
+            f"Selected Threshold: {threshold:.3f}"
+        )
+        explain_print("AUTOMATIC THRESHOLD DISCOVERY", content_thresh)
+
+    # Phase 2 - Add edges and track diagnostics
+    accepted_edges = 0
+    rejected_edges = 0
+    
+    # We create the candidate edges for accepted entries
+    # using np.where
+    accepted_mask = final_weights > threshold
+    np.fill_diagonal(accepted_mask, False)
+    # Only upper triangle to avoid duplicate edges
+    accepted_mask = accepted_mask & np.triu(np.ones((num_nodes, num_nodes), dtype=bool), k=1)
+    
+    accepted_indices = np.argwhere(accepted_mask)
+    
+    top_edges = []
+    acc_sem, acc_path, acc_tag = [], [], []
+    
+    for idx in accepted_indices:
+        i, j = idx
+        w = float(final_weights[i, j])
+        s_score = float(sim_matrix[i, j])
+        p_score = float(path_sim_matrix[i, j])
+        t_score = float(tag_sim_matrix[i, j])
+        
+        top_edges.append((i, j, w, s_score, p_score, t_score))
+        
+        op_id_i = endpoints[i]["operation_id"]
+        op_id_j = endpoints[j]["operation_id"]
+        G.add_edge(op_id_i, op_id_j, weight=w)
+        
+        accepted_edges += 1
+        acc_sem.append(s_score)
+        acc_path.append(p_score)
+        acc_tag.append(t_score)
+        
+    top_edges = sorted(top_edges, key=lambda x: x[2], reverse=True)
+    rejected_edges = len(all_scores) - accepted_edges
 
     if is_explain_mode():
-        nodes_count = G.number_of_nodes()
-        edges_count = G.number_of_edges()
-        avg_degree = sum(dict(G.degree()).values()) / nodes_count if nodes_count > 0 else 0
-        cc_count = nx.number_connected_components(G)
+        total_comparisons = len(all_scores)
+        acceptance_rate = accepted_edges / total_comparisons if total_comparisons > 0 else 0
         
-        content = (
-            f"Nodes:\n{nodes_count}\n\n"
-            f"Edges:\n{edges_count}\n\n"
-            f"Average Degree:\n{avg_degree:.1f}\n\n"
-            f"Connected Components:\n{cc_count}"
+        if len(all_scores) > 0:
+            hist, bins = np.histogram(all_scores, bins=10, range=(0.0, 1.0))
+            hist_str = "\n".join(f"{bins[k]:.1f}-{bins[k+1]:.1f}: {hist[k]}" for k in range(10))
+        else:
+            hist_str = "No data"
+        
+        top_100_str = "\n".join(
+            f"{endpoints[u]['operation_id']} <-> {endpoints[v]['operation_id']} (Score: {w:.3f})"
+            for u, v, w, _, _, _ in top_edges[:100]
         )
-        explain_print("NETWORKX GRAPH SUMMARY", content)
+        
+        avg_s = np.mean(acc_sem) if acc_sem else 0
+        avg_p = np.mean(acc_path) if acc_path else 0
+        avg_t = np.mean(acc_tag) if acc_tag else 0
+        
+        content_graph = (
+            f"Total endpoints: {num_nodes}\n"
+            f"Total candidate comparisons: {total_comparisons}\n"
+            f"Accepted edges: {accepted_edges}\n"
+            f"Rejected edges: {rejected_edges}\n"
+            f"Edge acceptance rate: {acceptance_rate:.2%}\n\n"
+            f"Average semantic score (accepted): {avg_s:.3f}\n"
+            f"Average path score (accepted): {avg_p:.3f}\n"
+            f"Average tag score (accepted): {avg_t:.3f}\n\n"
+            f"Score distribution histogram:\n{hist_str}\n\n"
+            f"Top 100 strongest relationships:\n{top_100_str}"
+        )
+        explain_print("GRAPH VALIDATION", content_graph)
 
     return G
 
@@ -177,7 +255,6 @@ def detect_communities(G: nx.Graph) -> List[Set[str]]:
     Groups endpoints into community clusters using Leiden community detection.
     Falls back to single-node communities if no edges are present.
     """
-    # Check if we have edges to cluster
     if G.number_of_edges() == 0:
         return [{node} for node in G.nodes()]
 
@@ -185,7 +262,6 @@ def detect_communities(G: nx.Graph) -> List[Set[str]]:
         import igraph as ig
         import leidenalg
 
-        # Convert NetworkX to igraph
         nodes = list(G.nodes())
         node_indices = {n: i for i, n in enumerate(nodes)}
 
@@ -195,31 +271,25 @@ def detect_communities(G: nx.Graph) -> List[Set[str]]:
         g_ig = ig.Graph(n=len(nodes), edges=edges, directed=False)
         g_ig.es["weight"] = weights
 
-        # Run Leiden algorithm
         partition = leidenalg.find_partition(
             g_ig,
             leidenalg.ModularityVertexPartition,
             weights="weight",
             n_iterations=-1,
-            seed=42,  # for determinism
+            seed=42,
         )
 
-        # Map back to original node IDs
         communities = []
         for comm in partition:
             communities.append(set(nodes[i] for i in comm))
 
         return communities
     except ImportError as err:
-        logger.error(
-            f"Failed to import igraph/leidenalg: {err}. Please install dependencies."
-        )
-        # Fallback to single node communities if ML packages are missing
+        logger.error(f"Failed to import igraph/leidenalg: {err}. Please install dependencies.")
         return [{node} for node in G.nodes()]
 
 
 def check_ollama_status() -> bool:
-    """Checks if Ollama daemon is reachable on localhost:11434."""
     try:
         urllib.request.urlopen("http://localhost:11434/api/tags", timeout=1.0)
         return True
@@ -232,40 +302,28 @@ def generate_semantic_label(
     endpoints: List[Dict[str, Any]],
     use_llm: bool = True,
 ) -> Tuple[str, str, str, float]:
-    """
-    Assigns a user-friendly workflow name and description to a cluster.
-    If Ollama/Llama3 is available, requests semantic summary. Otherwise,
-    falls back to a high-fidelity path-based heuristic model.
-    """
     from src.ai_clustering.workflow_naming import generate_system_name
+    
+    # Deterministic naming (Phase 6 occurs inside generate_system_name now)
     system_name = generate_system_name(endpoints)
     
-    # 1. Gather paths and methods
     methods = [ep["method"] for ep in endpoints]
-    paths = [ep["url"] for ep in endpoints]
-
-    # Check if destructive actions exist (POST, PATCH, DELETE)
     has_write = any(m in ["POST", "PATCH", "PUT", "DELETE"] for m in methods)
 
-    # Formulate heuristic label
     action = "Management" if has_write else "Observability"
     
-    # Heuristic fallback display name
     fallback_display_name = system_name.replace("_", " ").title()
     heuristic_desc = f"{action} layer for {fallback_display_name}. Configured with {len(endpoints)} underlying endpoints."
 
-    # 3. LLM semantic labeling (if requested and online)
     if use_llm and check_ollama_status():
         try:
-            from ai_cluster.services.ollama_service import OllamaService
+            # Phase 7 Fix
+            from src.ai_clustering.ollama_service import OllamaService
 
             service = OllamaService()
 
             endpoint_summaries = "\n".join(
-                [
-                    f"- {ep['method']} {ep['url']} ({ep['operation_id']})"
-                    for ep in endpoints
-                ]
+                [f"- {ep['method']} {ep['url']} ({ep['operation_id']})" for ep in endpoints]
             )
 
             prompt = f"""
@@ -284,16 +342,8 @@ def generate_semantic_label(
             Set 'generated_description' to a single concise sentence describing its operational capability.
             """
 
-            from src.ai_clustering.explain import is_explain_mode, explain_print
             if is_explain_mode():
-                members_str = "\n".join(f"- {ep['method']} {ep['url']}" for ep in endpoints)
-                before_content = (
-                    f"system_name:\n{system_name}\n\n"
-                    f"community:\n{workflow_id.replace('wf_', '')}\n\n"
-                    f"members:\n{members_str}"
-                )
-                explain_print("BEFORE LLM", before_content)
-                explain_print("PROMPT SENT", prompt.strip())
+                explain_print("LLM VALIDATION - PROMPT SENT", prompt.strip())
 
             data = service.generate_workflow_mapping(prompt)
 
@@ -310,38 +360,24 @@ def generate_semantic_label(
 
                 if is_explain_mode():
                     content = (
-                        f"display_name:\n{display_name}\n\n"
-                        f"description:\n{desc}"
+                        f"Parsed Response:\n"
+                        f"display_name: {display_name}\n"
+                        f"description: {desc}"
                     )
-                    explain_print("AFTER LLM", content)
+                    explain_print("LLM VALIDATION - PARSED RESPONSE", content)
 
                 return system_name, display_name, desc, 0.95
         except Exception as err:
-            logger.warning(
-                f"Ollama labeling failed: {err}. Falling back to heuristics."
-            )
-
-    if is_explain_mode():
-        content = (
-            f"display_name:\n{fallback_display_name}\n\n"
-            f"description:\n{heuristic_desc}"
-        )
-        explain_print("AFTER LLM (FALLBACK)", content)
+            logger.warning(f"Ollama labeling failed: {err}. Falling back to heuristics.")
+            if is_explain_mode():
+                explain_print("LLM VALIDATION - FALLBACK", f"Reason: {err}")
 
     return system_name, fallback_display_name, heuristic_desc, 0.85
 
 
 def run_pipeline(contract_a_data: ContractA) -> None:
-    """
-    Executes the compile-time discovery pipeline:
-      1. Save raw endpoints to SQLite.
-      2. Construct NetworkX graph using Semantic Embeddings.
-      3. Cluster endpoints using Leiden algorithm.
-      4. Generate deterministic community IDs.
-      5. Semantically label communities.
-      6. Write edges and workflows to SQLite.
-    """
     import hashlib
+    import numpy as np
     from src.core.database import (
         log_audit_event,
         save_endpoints,
@@ -371,43 +407,66 @@ def run_pipeline(contract_a_data: ContractA) -> None:
             }
         )
 
-    # Save to database initially
     save_endpoints(endpoints)
 
-    # Build Graph
     G = build_relationship_graph(endpoints)
 
-    # Extract edges to save
     edges_list = []
     for u, v, data in G.edges(data=True):
         edges_list.append({"source": u, "target": v, "weight": data.get("weight", 1.0)})
     save_edges(edges_list)
 
-    # Detect communities
     communities = detect_communities(G)
 
     if is_explain_mode():
-        from src.ai_clustering.explain import explain_print
+        threshold = G.graph.get("threshold", 0.50)
+        
         for idx, comm_node_ids in enumerate(communities, 1):
             comm_id = f"c_{idx:03d}"
             members = []
+            
+            # Phase 5 Metrics
+            comm_size = len(comm_node_ids)
+            internal_sims = []
+            if comm_size > 1:
+                # Calculate internal similarity
+                for u in comm_node_ids:
+                    for v in comm_node_ids:
+                        if u != v and G.has_edge(u, v):
+                            internal_sims.append(G[u][v]["weight"])
+            
+            avg_sim = np.mean(internal_sims) if internal_sims else 0.0
+            min_sim = np.min(internal_sims) if internal_sims else 0.0
+            max_sim = np.max(internal_sims) if internal_sims else 0.0
+            cohesion = avg_sim * (comm_size / (comm_size + 1)) if comm_size > 1 else 0.0
+            
+            warnings = []
+            if comm_size == 1:
+                warnings.append("Suspicious: Size = 1")
+            elif cohesion < threshold:
+                warnings.append(f"Suspicious: Low cohesion ({cohesion:.3f} < {threshold:.3f})")
+                
             for n_idx, op_id in enumerate(comm_node_ids, 1):
                 ep = next(e for e in endpoints if e["operation_id"] == op_id)
                 members.append(f"{n_idx}. {ep['method']} {ep.get('url', '')}")
             members_str = "\n".join(members)
+            
             content = (
-                f"Community ID:\n{comm_id}\n\n"
-                f"Members:\n{members_str}\n\n"
-                f"Total:\n{len(comm_node_ids)} endpoints"
+                f"Community ID: {comm_id}\n"
+                f"Size: {comm_size}\n"
+                f"Average Internal Similarity: {avg_sim:.3f}\n"
+                f"Min Similarity: {min_sim:.3f}\n"
+                f"Max Similarity: {max_sim:.3f}\n"
+                f"Cohesion Score: {cohesion:.3f}\n"
+                f"Flags: {', '.join(warnings) if warnings else 'None'}\n\n"
+                f"Endpoints:\n{members_str}"
             )
-            explain_print("COMMUNITY DISCOVERY", content)
+            explain_print("COMMUNITY VALIDATION", content)
 
-    # Update endpoints in DB with deterministic MD5 community IDs
     updated_endpoints = []
     workflows_list = []
 
     for comm in communities:
-        # Sort operation_ids to ensure deterministic hashing
         sorted_ops = sorted(list(comm))
         comm_hash = hashlib.md5("".join(sorted_ops).encode("utf-8")).hexdigest()[:8]
         comm_id = f"c_{comm_hash}"
@@ -421,13 +480,11 @@ def run_pipeline(contract_a_data: ContractA) -> None:
                     comm_endpoints.append(ep)
                     break
 
-        # Discover and label workflows
         workflow_id = f"wf_{comm_id}"
         system_name, display_name, wf_desc, confidence = generate_semantic_label(
-            workflow_id, comm_endpoints
+            workflow_id, comm_endpoints, use_llm=False
         )
 
-        # Calculate risk based on destructive verbs
         methods = [ep["method"] for ep in comm_endpoints]
         if "DELETE" in methods:
             risk = "critical"
@@ -450,18 +507,6 @@ def run_pipeline(contract_a_data: ContractA) -> None:
                 "community_id": comm_id,
             }
         )
-        
-        if is_explain_mode():
-            content = (
-                f"workflow_id:\n{workflow_id}\n\n"
-                f"community_id:\n{comm_id}\n\n"
-                f"system_name:\n{system_name}\n\n"
-                f"display_name:\n{display_name}\n\n"
-                f"risk:\n{risk}\n\n"
-                f"description:\n{wf_desc}\n\n"
-                f"approved:\n0"
-            )
-            explain_print("DATABASE RECORD PREVIEW", content)
 
     save_endpoints(updated_endpoints)
     save_workflows(workflows_list)
@@ -471,7 +516,6 @@ def run_pipeline(contract_a_data: ContractA) -> None:
         f"Graph construction completed. Clustered {len(endpoints)} endpoints into {len(workflows_list)} workflow tools.",
     )
     
-    # Return metrics for FINAL PIPELINE REPORT
     return {
         "embeddings_generated": len(endpoints),
         "graph_nodes": G.number_of_nodes(),

@@ -28,18 +28,28 @@ from sqlalchemy import Column, String, Integer, ForeignKey, Float
 # ===========================================================================
 
 
+from sqlalchemy import create_engine, text
+
 # File path resolved relative to project root
 DB_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "governance.db"
 
+SYNC_DB_URL = f"sqlite:///{DB_FILE}"
 
-def get_db_connection() -> sqlite3.Connection:
-    """Create a connection to the SQLite database with row factory enabled and WAL mode configured."""
-    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_FILE))
-    conn.execute("PRAGMA journal_mode=WAL;")
-    conn.execute("PRAGMA busy_timeout=5000;")
-    conn.row_factory = sqlite3.Row
-    return conn
+sync_engine = create_engine(SYNC_DB_URL, echo=False)
+
+from sqlalchemy import event
+
+@event.listens_for(sync_engine, "connect")
+def set_sqlite_pragma_sync(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=5000")
+    cursor.close()
+
+def get_db_connection():
+    """Create a raw connection to the SQLite database via SQLAlchemy engine to share locking."""
+    # We return a raw connection since legacy code relies on it
+    return sync_engine.raw_connection()
 
 
 def init_db_sync() -> None:
@@ -157,9 +167,9 @@ def set_pipeline_status(stage: str, status: str) -> None:
 
 def get_pipeline_statuses() -> Dict[str, str]:
     """Retrieve all pipeline stages statuses."""
-    with get_db_connection() as conn:
-        cursor = conn.execute("SELECT stage, status FROM pipeline_status")
-        return {row["stage"]: row["status"] for row in cursor.fetchall()}
+    with sync_engine.connect() as conn:
+        result = conn.execute(text("SELECT stage, status FROM pipeline_status"))
+        return {row.stage: row.status for row in result.mappings()}
 
 
 def log_audit_event(
@@ -231,17 +241,17 @@ def save_edges(edges_list: List[Dict[str, Any]]) -> None:
 
 def get_edges() -> List[Dict[str, Any]]:
     """Retrieve all graph edges."""
-    with get_db_connection() as conn:
-        cursor = conn.execute("SELECT * FROM edges")
-        return [dict(row) for row in cursor.fetchall()]
+    with sync_engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM edges"))
+        return [dict(row) for row in result.mappings()]
 
 
 def get_all_endpoints() -> List[Dict[str, Any]]:
     """Retrieve all endpoints with parsed parameters."""
-    with get_db_connection() as conn:
-        cursor = conn.execute("SELECT * FROM endpoints")
+    with sync_engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM endpoints"))
         results = []
-        for row in cursor.fetchall():
+        for row in result.mappings():
             results.append(
                 {
                     "operation_id": row["operation_id"],
@@ -336,20 +346,19 @@ def get_workflows(
     approved_only: bool = False, pending_only: bool = False
 ) -> List[Dict[str, Any]]:
     """Retrieve workflows and associate underlying endpoints based on community_id."""
-    with get_db_connection() as conn:
+    with sync_engine.connect() as conn:
         query = "SELECT * FROM workflows"
-        params = []
         if approved_only:
             query += " WHERE approved = 1"
         elif pending_only:
             query += " WHERE approved = 0"
 
-        wf_cursor = conn.execute(query, params)
-        workflows = [dict(row) for row in wf_cursor.fetchall()]
+        wf_result = conn.execute(text(query))
+        workflows = [dict(row) for row in wf_result.mappings()]
 
         # Map endpoints to their workflows by community_id
-        ep_cursor = conn.execute("SELECT * FROM endpoints")
-        endpoints = [dict(row) for row in ep_cursor.fetchall()]
+        ep_result = conn.execute(text("SELECT * FROM endpoints"))
+        endpoints = [dict(row) for row in ep_result.mappings()]
 
         from collections import defaultdict
 
@@ -411,8 +420,6 @@ def get_workflows(
 ASYNC_DB_URL = f"sqlite+aiosqlite:///{DB_FILE}"
 
 engine = create_async_engine(ASYNC_DB_URL, echo=False)
-
-from sqlalchemy import event
 
 @event.listens_for(engine.sync_engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -494,18 +501,13 @@ async def sync_governance_to_mcp_proxy() -> None:
     from sqlalchemy.orm import selectinload
 
     # Retrieve data from governance.db
-    DB_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "governance.db"
-    if not DB_FILE.exists():
+    try:
+        with sync_engine.connect() as conn:
+            gov_workflows = [dict(row) for row in conn.execute(text("SELECT * FROM workflows")).mappings()]
+            gov_endpoints = [dict(row) for row in conn.execute(text("SELECT * FROM endpoints")).mappings()]
+    except Exception as e:
+        print(f"Error accessing governance db for sync: {e}")
         return
-
-    conn = sqlite3.connect(str(DB_FILE))
-    conn.row_factory = sqlite3.Row
-    cursor = conn.execute("SELECT * FROM workflows")
-    gov_workflows = [dict(row) for row in cursor.fetchall()]
-
-    cursor = conn.execute("SELECT * FROM endpoints")
-    gov_endpoints = [dict(row) for row in cursor.fetchall()]
-    conn.close()
 
     # Group endpoints by community_id
     from collections import defaultdict

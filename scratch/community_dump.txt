@@ -1,0 +1,23 @@
+# All Generated Workflow Names
+- Certificate Operations (160)
+- Dell L C Service Operations (127)
+- Chassis Operations (118)
+- Dell Raid Service Operations (103)
+- Manager Operations (54)
+- Telemetry Service Operations (37)
+- Certificate Collection Operations (27)
+- Port Operations (23)
+- Software Inventory Operations (14)
+- Job Operations (9)
+- Event Destination Operations (9)
+- Session Operations (6)
+- Certificate Service Operations (6)
+- License Operations (6)
+- Task Operations (5)
+- Message Registry Management (4)
+- Component Integrity Management (2)
+- Json Schema File Management (2)
+- Service Root Management (1)
+- Event Management (1)
+
+# Sample Communities
