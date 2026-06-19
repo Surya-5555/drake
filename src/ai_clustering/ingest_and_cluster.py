@@ -33,6 +33,11 @@ def main() -> int:
         help="Path to the OpenAPI JSON/YAML spec file.",
     )
     parser.add_argument(
+        "--explain-pipeline",
+        action="store_true",
+        help="Enable live pipeline explain mode to stream detailed stages to the terminal.",
+    )
+    parser.add_argument(
         "--show-all-endpoints",
         action="store_true",
         help="Print every endpoint discovered in explain mode.",
