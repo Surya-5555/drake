@@ -122,6 +122,8 @@ async def load_approved_tools_from_db() -> None:
                         )
                     )
                 dynamic_tool.__signature__ = inspect.Signature(parameters=params)  # type: ignore
+                dynamic_tool.__annotations__ = {p: str for p in p_names}
+                dynamic_tool.__annotations__["return"] = dict
                 return dynamic_tool
 
             dynamic_tool = make_tool(name, desc, param_names)
@@ -176,7 +178,7 @@ async def preview_workflow_steps(workflow_id: str) -> Dict[str, Any]:
 
         return {
             "workflow_id": workflow_id,
-            "name": wf.workflow_name,
+            "name": wf.display_name,
             "simulated_api_calls": [
                 {
                     "step_id": idx + 1,

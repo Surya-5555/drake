@@ -13,21 +13,31 @@ def test_runtime_reload(mock_db_connect, mock_sync_mappings):
     # Setup API key
     valid_key = os.getenv("DELL_MCP_API_KEY", "default_dev_key")
 
+    # Save original reload callback to avoid test pollution
+    original_callback = getattr(app.state, "mcp_reload", None)
+
     # Mock the reload callback
     mock_reload_callback = AsyncMock()
     app.state.mcp_reload = mock_reload_callback
 
-    # Create mock db connection and context manager
-    mock_db = AsyncMock()
-    mock_db_connect.return_value.__aenter__.return_value = mock_db
+    try:
+        # Create mock db connection and context manager
+        mock_db = AsyncMock()
+        mock_db_connect.return_value.__aenter__.return_value = mock_db
 
-    response = client.post("/api/v1/mcp/reload", headers={"X-API-Key": valid_key})
+        response = client.post("/api/v1/mcp/reload", headers={"X-API-Key": valid_key})
 
-    assert response.status_code == 200
-    assert response.json() == {"status": "reloaded"}
+        assert response.status_code == 200
+        assert response.json() == {"status": "reloaded"}
 
-    # Verify the reload callback was triggered
-    mock_reload_callback.assert_called_once()
+        # Verify the reload callback was triggered
+        mock_reload_callback.assert_called_once()
 
-    # Verify the mappings sync was called
-    mock_sync_mappings.assert_called_once()
+        # Verify the mappings sync was called
+        mock_sync_mappings.assert_called_once()
+    finally:
+        if original_callback is not None:
+            app.state.mcp_reload = original_callback
+        else:
+            if hasattr(app.state, "mcp_reload"):
+                delattr(app.state, "mcp_reload")
