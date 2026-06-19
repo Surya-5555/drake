@@ -34,11 +34,34 @@ MAPPING_PATH = os.getenv(
 
 def load_workflow_mappings() -> Dict[str, Any]:
     """
-    Reads the workflow mappings from a local JSON file (Contract B).
-
-    Uses a standard synchronous read since it is done only at startup,
-    ensuring we do not block the event loop after the server starts.
+    Reads the workflow mappings from the SQLite database (approved only).
+    Falls back to local JSON file (Contract B) if database is empty or unavailable.
     """
+    try:
+        from src.core.database import DB_FILE, get_workflows
+        if DB_FILE.exists():
+            approved = get_workflows(approved_only=True)
+            if approved:
+                steps_mapping = {}
+                for wf in approved:
+                    steps_mapping[wf["workflowName"]] = {
+                        "name": wf["workflowName"],
+                        "description": wf["generatedDescription"],
+                        "steps": [
+                            {
+                                "step_id": idx + 1,
+                                "name": ep["operationId"],
+                                "method": ep["method"],
+                                "path": ep["path"],
+                                "params": {},
+                            } for idx, ep in enumerate(wf["underlyingEndpoints"])
+                        ]
+                    }
+                logger.info(f"Loaded {len(steps_mapping)} approved workflows from SQLite database.")
+                return {"workflows": steps_mapping}
+    except Exception as err:
+        logger.warning(f"Failed to load workflows from SQLite: {err}. Falling back to JSON.")
+
     if not os.path.exists(MAPPING_PATH):
         logger.warning(
             f"Workflow mapping file not found at '{MAPPING_PATH}'. Using fallback."
