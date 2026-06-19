@@ -39,7 +39,7 @@ class MockHTTPXExecutor(BaseExecutor):
         async with async_session() as session:
             result = await session.execute(
                 select(Workflow)
-                .where(Workflow.workflow_name == workflow_name)
+                .where(Workflow.system_name == workflow_name)
                 .options(selectinload(Workflow.steps))
             )
             wf = result.scalar_one_or_none()

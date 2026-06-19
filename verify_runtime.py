@@ -40,7 +40,8 @@ async def main():
         )
         wf = Workflow(
             id=workflow_id,
-            workflow_name=wf_name,
+            system_name=wf_name,
+            display_name=wf_name,
             risk_level="high",
             cluster_size=2,
             confidence=0.9,

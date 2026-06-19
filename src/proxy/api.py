@@ -95,7 +95,8 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
 
 
 class UpdateWorkflowPayload(BaseModel):
-    displayName: str
+    displayName: Optional[str] = None
+    workflowName: Optional[str] = None
     generatedDescription: str
 
 
@@ -192,6 +193,7 @@ async def get_pending_workflows() -> List[Dict[str, Any]]:
                         "id": r["id"],
                         "systemName": r["system_name"],
                         "displayName": r["display_name"],
+                        "workflowName": r["display_name"],
                         "riskLevel": r["risk_level"],
                         "clusterSize": r["cluster_size"],
                         "confidence": r["confidence"],
@@ -285,9 +287,13 @@ async def update_workflow(
         if not wf:
             raise HTTPException(status_code=404, detail="Workflow not found")
 
+        display_name = payload.displayName or payload.workflowName
+        if not display_name:
+            raise HTTPException(status_code=400, detail="Either displayName or workflowName must be provided")
+
         await db.execute(
             "UPDATE workflows SET display_name = ?, generated_description = ? WHERE id = ?",
-            (payload.displayName, payload.generatedDescription, workflow_id),
+            (display_name, payload.generatedDescription, workflow_id),
         )
         await db.commit()
 
@@ -304,8 +310,8 @@ async def update_workflow(
     await log_audit_event_async(
         "workflow_updated",
         "success",
-        f"Updated name to '{payload.displayName}' and description.",
-        payload.displayName,
+        f"Updated name to '{display_name}' and description.",
+        display_name,
         "admin",
     )
 
@@ -315,6 +321,7 @@ async def update_workflow(
         "id": updated_wf["id"],
         "systemName": updated_wf["system_name"],
         "displayName": updated_wf["display_name"],
+        "workflowName": updated_wf["display_name"],
         "riskLevel": updated_wf["risk_level"],
         "clusterSize": updated_wf["cluster_size"],
         "confidence": updated_wf["confidence"],
@@ -403,6 +410,7 @@ async def get_graph() -> Dict[str, Any]:
                 "id": wf["community_id"] or wf["id"],
                 "systemName": wf["system_name"],
                 "displayName": wf["display_name"],
+                "workflowName": wf["display_name"],
                 "size": wf["cluster_size"],
                 "confidence": wf["confidence"],
             }
@@ -461,6 +469,7 @@ async def get_metrics() -> Dict[str, Any]:
             {
                 "systemName": wf["system_name"],
                 "displayName": wf["display_name"],
+                "workflowName": wf["display_name"],
                 "endpointCount": wf["cluster_size"],
             }
             for wf in wfs

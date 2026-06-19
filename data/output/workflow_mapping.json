@@ -1,17 +1,9 @@
 {
   "workflows": {
-    "edited_systems_workflow": {
-      "name": "edited_systems_workflow",
-      "description": "Edited description",
-      "steps": [
-        {
-          "step_id": 1,
-          "name": "GET_/redfish/v1/Systems",
-          "method": "GET",
-          "url": "/redfish/v1/Systems",
-          "params": {}
-        }
-      ]
+    "test_workflow_one": {
+      "name": "test_workflow_one",
+      "description": "A test workflow description",
+      "steps": []
     }
   }
 }

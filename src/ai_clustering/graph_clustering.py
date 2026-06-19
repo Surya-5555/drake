@@ -51,8 +51,8 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
         sim_matrix = np.zeros((len(endpoints), len(endpoints)))
 
     def compute_path_similarity(url_a: str, url_b: str) -> float:
-        parts_a = [p for p in url_a.split("/") if p]
-        parts_b = [p for p in url_b.split("/") if p]
+        parts_a = [p for p in url_a.split("/") if p and p.lower() not in ("redfish", "v1", "api")]
+        parts_b = [p for p in url_b.split("/") if p and p.lower() not in ("redfish", "v1", "api")]
         if not parts_a and not parts_b:
             return 1.0
         if not parts_a or not parts_b:
