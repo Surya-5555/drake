@@ -48,13 +48,13 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
     # Connect nodes based on relationship heuristics
     for i in range(len(nodes)):
         id_i, data_i = nodes[i]
-        path_i = data_i["path"]
+        path_i = data_i["url"]
         base_i = get_base_path(path_i)
         params_i = set(data_i["required_params"])
 
         for j in range(i + 1, len(nodes)):
             id_j, data_j = nodes[j]
-            path_j = data_j["path"]
+            path_j = data_j["url"]
             base_j = get_base_path(path_j)
             params_j = set(data_j["required_params"])
 
@@ -121,7 +121,7 @@ def generate_semantic_label(
     """
     # 1. Gather paths and methods
     methods = [ep["method"] for ep in endpoints]
-    paths = [ep["path"] for ep in endpoints]
+    paths = [ep["url"] for ep in endpoints]
     
     # 2. Heuristic extraction
     # Determine base domain segment
@@ -164,7 +164,7 @@ def generate_semantic_label(
         try:
             client = ollama.Client()
             endpoint_summaries = "\n".join(
-                [f"- {ep['method']} {ep['path']} ({ep['operation_id']})" for ep in endpoints]
+                [f"- {ep['method']} {ep['url']} ({ep['operation_id']})" for ep in endpoints]
             )
             
             prompt = f"""
@@ -217,9 +217,9 @@ def run_pipeline(contract_a_data: ContractA) -> None:
     for ep in contract_a_data.endpoints:
         endpoints.append({
             "operation_id": ep.operation_id,
-            "method": ep.http_method,
-            "path": ep.url,
-            "required_params": [p.name for p in ep.required_parameters],
+            "method": ep.method,
+            "url": ep.url,
+            "required_params": [p.name for p in ep.required_params],
         })
 
     # Save to database

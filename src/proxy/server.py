@@ -52,7 +52,7 @@ def load_workflow_mappings() -> Dict[str, Any]:
                                 "step_id": idx + 1,
                                 "name": ep["operationId"],
                                 "method": ep["method"],
-                                "path": ep["path"],
+                                "url": ep["url"],
                                 "params": {},
                             } for idx, ep in enumerate(wf["underlyingEndpoints"])
                         ]
@@ -122,7 +122,7 @@ def extract_placeholders(workflow_data: Dict[str, Any]) -> Set[str]:
                 search(item)
 
     for step in workflow_data.get("steps", []):
-        search(step.get("path", ""))
+        search(step.get("url", ""))
         search(step.get("params", {}))
 
     return placeholders

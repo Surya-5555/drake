@@ -65,7 +65,7 @@ def test_endpoint_and_workflow_persistence() -> None:
         {
             "operation_id": "GET_/redfish/v1/Systems",
             "method": "GET",
-            "path": "/redfish/v1/Systems",
+            "url": "/redfish/v1/Systems",
             "required_params": [],
             "community_id": "1",
         }
@@ -104,19 +104,19 @@ def test_relationship_graph_and_communities() -> None:
         {
             "operation_id": "GET_/redfish/v1/Systems",
             "method": "GET",
-            "path": "/redfish/v1/Systems",
+            "url": "/redfish/v1/Systems",
             "required_params": [],
         },
         {
             "operation_id": "PATCH_/redfish/v1/Systems",
             "method": "PATCH",
-            "path": "/redfish/v1/Systems",
+            "url": "/redfish/v1/Systems",
             "required_params": [],
         },
         {
             "operation_id": "GET_/redfish/v1/UpdateService",
             "method": "GET",
-            "path": "/redfish/v1/UpdateService",
+            "url": "/redfish/v1/UpdateService",
             "required_params": [],
         },
     ]
@@ -139,7 +139,7 @@ def test_fastapi_endpoints() -> None:
         {
             "operation_id": "GET_/redfish/v1/Systems",
             "method": "GET",
-            "path": "/redfish/v1/Systems",
+            "url": "/redfish/v1/Systems",
             "required_params": [],
             "community_id": "1",
         }

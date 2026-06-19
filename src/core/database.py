@@ -48,7 +48,7 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS endpoints (
                 operation_id TEXT PRIMARY KEY,
                 method TEXT NOT NULL,
-                path TEXT NOT NULL,
+                url TEXT NOT NULL,
                 required_params TEXT NOT NULL,  -- JSON serialized list of strings
                 community_id TEXT
             )
@@ -141,13 +141,13 @@ def save_endpoints(endpoints_list: List[Dict[str, Any]]) -> None:
         for ep in endpoints_list:
             conn.execute(
                 """
-                INSERT INTO endpoints (operation_id, method, path, required_params, community_id)
+                INSERT INTO endpoints (operation_id, method, url, required_params, community_id)
                 VALUES (?, ?, ?, ?, ?)
                 """,
                 (
                     ep["operation_id"],
                     ep["method"],
-                    ep["path"],
+                    ep["url"],
                     json.dumps(ep.get("required_params", [])),
                     ep.get("community_id"),
                 ),
@@ -165,7 +165,7 @@ def get_all_endpoints() -> List[Dict[str, Any]]:
                 {
                     "operation_id": row["operation_id"],
                     "method": row["method"],
-                    "path": row["path"],
+                    "url": row["url"],
                     "required_params": json.loads(row["required_params"]),
                     "community_id": row["community_id"],
                 }
@@ -242,7 +242,7 @@ def get_workflows(approved_only: bool = False, pending_only: bool = False) -> Li
                     {
                         "operationId": ep["operation_id"],
                         "method": ep["method"],
-                        "path": ep["path"],
+                        "url": ep["url"],
                     }
                 )
 

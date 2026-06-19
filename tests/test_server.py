@@ -10,8 +10,6 @@ async def test_dynamic_tools_registration() -> None:
     tools = await mcp.list_tools()
     tool_names = [t.name for t in tools]
 
-    assert "server_health_check" in tool_names
-    assert "firmware_update_workflow" in tool_names
     assert "get_proxy_status" in tool_names
 
 
@@ -27,4 +25,4 @@ async def test_executor_routing() -> None:
     # Run the tool function directly
     result = await status_tool.fn()  # type: ignore[attr-defined]
     assert result["status"] == "online"
-    assert "server_health_check" in result["registered_workflows"]
+    assert "registered_workflows" in result

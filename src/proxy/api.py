@@ -247,7 +247,7 @@ async def get_graph() -> Dict[str, Any]:
             nodes.append({
                 "id": ep["operation_id"],
                 "method": ep["method"],
-                "label": ep["path"],
+                "label": ep["url"],
                 "communityId": ep["community_id"] or "unclustered",
             })
 
@@ -391,7 +391,7 @@ def sync_workflow_mappings() -> None:
                         "step_id": idx + 1,
                         "name": ep["operation_id"],
                         "method": ep["method"],
-                        "path": ep["path"],
+                        "url": ep["url"],
                         "params": {},  # Populated dynamically by proxy runtime
                     })
             

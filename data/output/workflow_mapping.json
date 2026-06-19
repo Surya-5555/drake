@@ -8,7 +8,7 @@
           "step_id": 1,
           "name": "GET_/redfish/v1/Systems",
           "method": "GET",
-          "path": "/redfish/v1/Systems",
+          "url": "/redfish/v1/Systems",
           "params": {}
         }
       ]
