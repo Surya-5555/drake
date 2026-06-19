@@ -224,3 +224,49 @@ def test_fastapi_endpoints() -> None:
     assert response.status_code == 200
     events = response.json()
     assert len(events) >= 2  # generated + approved
+
+
+def test_prometheus_metrics_endpoint() -> None:
+    """Validate Prometheus scraping metrics endpoint."""
+    client = TestClient(app)
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    text = response.text
+    assert "dell_mcp_endpoints_total" in text
+    assert "dell_mcp_workflows_total" in text
+    assert "dell_mcp_workflows_approved_total" in text
+
+
+def test_export_workflow_ansible() -> None:
+    """Validate Ansible Playbook export endpoint for a workflow."""
+    from src.core.database import save_workflows, get_db_connection
+    dummy_wfs = [
+        {
+            "id": "wf_ansible_test",
+            "workflow_name": "ansible_test_workflow",
+            "risk_level": "medium",
+            "cluster_size": 1,
+            "confidence": 0.95,
+            "generated_description": "Ansible test workflow description.",
+            "community_id": "c_ansible",
+        }
+    ]
+    save_workflows(dummy_wfs)
+    
+    with get_db_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO endpoint_steps (workflow_id, step_order, operation_id, method, url, required_params, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+            """,
+            ("wf_ansible_test", 1, "test_op", "GET", "/redfish/v1/Systems", "[]"),
+        )
+        conn.commit()
+
+    client = TestClient(app)
+    response = client.get("/api/v1/workflows/wf_ansible_test/export/ansible")
+    assert response.status_code == 200
+    yaml_text = response.text
+    assert "ansible.builtin.uri" in yaml_text
+    assert "/redfish/v1/Systems" in yaml_text
+    assert "idrac_servers" in yaml_text

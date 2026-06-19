@@ -33,9 +33,11 @@ DB_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "governance.d
 
 
 def get_db_connection() -> sqlite3.Connection:
-    """Create a connection to the SQLite database with row factory enabled."""
+    """Create a connection to the SQLite database with row factory enabled and WAL mode configured."""
     DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_FILE))
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=5000;")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -409,6 +411,16 @@ def get_workflows(
 ASYNC_DB_URL = f"sqlite+aiosqlite:///{DB_FILE}"
 
 engine = create_async_engine(ASYNC_DB_URL, echo=False)
+
+from sqlalchemy import event
+
+@event.listens_for(engine.sync_engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=5000")
+    cursor.close()
+
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 Base = declarative_base()
 
