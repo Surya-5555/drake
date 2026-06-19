@@ -19,6 +19,7 @@ from sqlalchemy.orm import selectinload
 from src.core.database import (
     async_session,
     init_db,
+    init_db_sync,
     Workflow,
     EndpointStep,
 )
@@ -97,7 +98,7 @@ async def load_approved_tools_from_db() -> None:
         approved_wfs = result.scalars().all()
 
         for wf in approved_wfs:
-            name = wf.workflow_name
+            name = wf.system_name
             desc = wf.generated_description or f"Execute clustered workflow for {name}"
             param_names = list(extract_placeholders_from_steps(wf.steps))
 
@@ -192,6 +193,7 @@ async def preview_workflow_steps(workflow_id: str) -> Dict[str, Any]:
 async def lifespan(app: FastAPI):
     # Startup actions
     logger.info("Lifespan startup: initializing database and loading approved tools...")
+    init_db_sync()
     await init_db()
 
     # Sync governance.db state (Leiden clusters) to mcp_proxy.db

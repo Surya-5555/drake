@@ -75,7 +75,8 @@ def init_db_sync() -> None:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS workflows (
                 id TEXT PRIMARY KEY,
-                workflow_name TEXT NOT NULL,
+                system_name TEXT NOT NULL,
+                display_name TEXT NOT NULL,
                 risk_level TEXT NOT NULL,
                 cluster_size INTEGER NOT NULL,
                 confidence REAL NOT NULL,
@@ -85,6 +86,18 @@ def init_db_sync() -> None:
                 community_id TEXT
             )
             """)
+        
+        # Automatic Migration
+        try:
+            cursor = conn.execute("PRAGMA table_info(workflows)")
+            columns = [row["name"] for row in cursor.fetchall()]
+            if columns and "system_name" not in columns:
+                conn.execute("ALTER TABLE workflows ADD COLUMN system_name TEXT DEFAULT 'legacy'")
+                conn.execute("ALTER TABLE workflows ADD COLUMN display_name TEXT DEFAULT 'legacy'")
+                if "workflow_name" in columns:
+                    conn.execute("UPDATE workflows SET display_name = workflow_name, system_name = workflow_name")
+        except Exception:
+            pass
 
         # 4. Audit trail events
         conn.execute("""
@@ -244,7 +257,7 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
     with get_db_connection() as conn:
         # Load existing approval status for preservation
         cursor = conn.execute(
-            "SELECT id, approved, rejection_reason, workflow_name, generated_description FROM workflows"
+            "SELECT id, approved, rejection_reason, system_name, display_name, generated_description FROM workflows"
         )
         existing = {row["id"]: dict(row) for row in cursor.fetchall()}
 
@@ -254,26 +267,32 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
             wf_id = wf["id"]
             approved = 0
             rejection_reason = None
-            wf_name = wf["workflow_name"]
+            system_name = wf["system_name"]
+            display_name = wf["display_name"]
             wf_desc = wf["generated_description"]
 
             if wf_id in existing:
                 approved = existing[wf_id]["approved"]
                 rejection_reason = existing[wf_id]["rejection_reason"]
-                # Keep edited values if the user had modified them
-                if existing[wf_id]["workflow_name"] != wf_name:
-                    wf_name = existing[wf_id]["workflow_name"]
+                
+                # System name never changes after creation
+                system_name = existing[wf_id]["system_name"]
+                
+                # Keep edited values if the user had modified them (only check display name)
+                if existing[wf_id]["display_name"] != display_name:
+                    display_name = existing[wf_id]["display_name"]
                 if existing[wf_id]["generated_description"] != wf_desc:
                     wf_desc = existing[wf_id]["generated_description"]
 
             conn.execute(
                 """
-                INSERT INTO workflows (id, workflow_name, risk_level, cluster_size, confidence, generated_description, approved, rejection_reason, community_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO workflows (id, system_name, display_name, risk_level, cluster_size, confidence, generated_description, approved, rejection_reason, community_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     wf_id,
-                    wf_name,
+                    system_name,
+                    display_name,
                     wf["risk_level"],
                     wf["cluster_size"],
                     wf["confidence"],
@@ -367,7 +386,8 @@ def get_workflows(
             results.append(
                 {
                     "id": wf_id,
-                    "workflowName": wf["workflow_name"],
+                    "systemName": wf["system_name"],
+                    "displayName": wf["display_name"],
                     "riskLevel": wf["risk_level"],
                     "clusterSize": len(underlying) or wf["cluster_size"],
                     "confidence": wf["confidence"],
@@ -400,7 +420,8 @@ class Workflow(Base):
     __tablename__ = "workflows"
 
     id = Column(String, primary_key=True)
-    workflow_name = Column(String, nullable=False)
+    system_name = Column(String, nullable=False)
+    display_name = Column(String, nullable=False)
     risk_level = Column(String)
     cluster_size = Column(Integer)
     confidence = Column(Float)
@@ -501,18 +522,21 @@ async def sync_governance_to_mcp_proxy() -> None:
             if not wf:
                 wf = Workflow(
                     id=wf_id,
-                    name=gwf["workflow_name"],
-                    description=gwf["generated_description"],
+                    system_name=gwf["system_name"],
+                    display_name=gwf["display_name"],
+                    generated_description=gwf["generated_description"],
                     risk_level=gwf["risk_level"],
-                    status=status_str,
                 )
+                # Map status correctly (Wait, original Workflow model didn't have status, it had approved. Ah! The DB model doesn't have status, wait... original code mapped it to `status` which isn't a column on Workflow!)
+                # Wait, I noticed earlier the Workflow model has `approved` but the sync code was using `status` and `name`! Let me fix this bug while I'm at it.
+                wf.approved = gwf["approved"]
                 session.add(wf)
             else:
                 # Update existing
-                wf.name = gwf["workflow_name"]
-                wf.description = gwf["generated_description"]
+                wf.display_name = gwf["display_name"]
+                wf.generated_description = gwf["generated_description"]
                 wf.risk_level = gwf["risk_level"]
-                wf.status = status_str
+                wf.approved = gwf["approved"]
 
             # Synchronize steps
             underlying = community_to_endpoints[comm_id]

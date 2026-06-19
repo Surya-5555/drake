@@ -193,71 +193,28 @@ def generate_semantic_label(
     workflow_id: str,
     endpoints: List[Dict[str, Any]],
     use_llm: bool = True,
-) -> Tuple[str, str, float]:
+) -> Tuple[str, str, str, float]:
     """
     Assigns a user-friendly workflow name and description to a cluster.
     If Ollama/Llama3 is available, requests semantic summary. Otherwise,
     falls back to a high-fidelity path-based heuristic model.
     """
+    from src.ai_clustering.workflow_naming import generate_system_name
+    system_name = generate_system_name(endpoints)
+    
     # 1. Gather paths and methods
     methods = [ep["method"] for ep in endpoints]
     paths = [ep["url"] for ep in endpoints]
-
-    # 2. Heuristic extraction
-    # Determine base domain segment
-    segments = []
-    for path in paths:
-        parts = [p for p in path.split("/") if p and not p.startswith("{")]
-        if len(parts) >= 2:
-            segments.append(parts[1])
-        elif len(parts) == 1:
-            segments.append(parts[0])
-
-    primary_domain = max(set(segments), key=segments.count) if segments else "system"
 
     # Check if destructive actions exist (POST, PATCH, DELETE)
     has_write = any(m in ["POST", "PATCH", "PUT", "DELETE"] for m in methods)
 
     # Formulate heuristic label
     action = "Management" if has_write else "Observability"
-
-    # Map raw domains to enterprise descriptions
-    domain_mappings = {
-        "Systems": (
-            "Server Hardware",
-            "Query hardware logs, power states, and server metrics.",
-        ),
-        "Chassis": (
-            "Chassis Controller",
-            "Monitor power supplies, fan controls, and thermal levels.",
-        ),
-        "UpdateService": (
-            "Firmware Update",
-            "Stage firmware updates and inspect update service inventory.",
-        ),
-        "AccountService": (
-            "User Account",
-            "Configure and secure user directories, privileges, and accounts.",
-        ),
-        "SessionService": (
-            "API Authentication",
-            "Manage sessions, active logins, and web service keys.",
-        ),
-        "Managers": (
-            "iDRAC BMC",
-            "Access Baseboard Management Controller properties and network configurations.",
-        ),
-    }
-
-    friendly_name, default_desc = domain_mappings.get(
-        primary_domain,
-        (primary_domain.capitalize(), f"Integrates {primary_domain} REST operations."),
-    )
-
-    heuristic_name = (
-        f"{primary_domain.lower()}_{'update' if has_write else 'query'}_workflow"
-    )
-    heuristic_desc = f"{action} layer for {friendly_name}. {default_desc} Configured with {len(endpoints)} underlying endpoints."
+    
+    # Heuristic fallback display name
+    fallback_display_name = system_name.replace("_", " ").title()
+    heuristic_desc = f"{action} layer for {fallback_display_name}. Configured with {len(endpoints)} underlying endpoints."
 
     # 3. LLM semantic labeling (if requested and online)
     if use_llm and check_ollama_status():
@@ -272,17 +229,21 @@ def generate_semantic_label(
                     for ep in endpoints
                 ]
             )
-            op_ids = [ep["operation_id"] for ep in endpoints]
 
             prompt = f"""
-            You are a Dell Enterprise IT Architect.
-            Create a single workflow that groups these iDRAC API endpoints:
+            You are a Dell Enterprise IT Architect naming a workflow.
+            The internal deterministic system name for this workflow is: {system_name}
+            
+            The underlying iDRAC API endpoints are:
             {endpoint_summaries}
             
+            DO NOT alter membership.
+            DO NOT invent endpoints.
+            DO NOT suggest changes.
+
             You MUST return a JSON object containing a 'workflows' array with exactly one item.
-            Set 'workflow_name' to a descriptive snake_case identifier.
-            Set 'underlying_api_calls' to exactly these operation IDs: {op_ids}
-            Set 'reasoning' to a single-item array containing a clear business description (maximum 2 sentences).
+            Set 'display_name' to a 2-6 word Title Case operational name.
+            Set 'generated_description' to a single concise sentence describing its operational capability.
             """
 
             data = service.generate_workflow_mapping(prompt)
@@ -290,21 +251,21 @@ def generate_semantic_label(
             workflows = data.get("workflows", [])
             if workflows:
                 wf = workflows[0]
-                name = wf.get("workflow_name", heuristic_name)
-                reasoning = wf.get("reasoning", [])
-                desc = reasoning[0] if reasoning else heuristic_desc
+                if hasattr(wf, "model_dump"):
+                    wf = wf.model_dump()
+                elif hasattr(wf, "dict"):
+                    wf = wf.dict()
+                
+                display_name = wf.get("display_name", fallback_display_name)
+                desc = wf.get("generated_description", heuristic_desc)
 
-                # Enforce snake_case for workflow name
-                if not re.match(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$", name):
-                    name = heuristic_name
-
-                return name, desc, 0.95
+                return system_name, display_name, desc, 0.95
         except Exception as err:
             logger.warning(
                 f"Ollama labeling failed: {err}. Falling back to heuristics."
             )
 
-    return heuristic_name, heuristic_desc, 0.85
+    return system_name, fallback_display_name, heuristic_desc, 0.85
 
 
 def run_pipeline(contract_a_data: ContractA) -> None:
@@ -383,7 +344,7 @@ def run_pipeline(contract_a_data: ContractA) -> None:
 
         # Discover and label workflows
         workflow_id = f"wf_{comm_id}"
-        wf_name, wf_desc, confidence = generate_semantic_label(
+        system_name, display_name, wf_desc, confidence = generate_semantic_label(
             workflow_id, comm_endpoints
         )
 
@@ -401,7 +362,8 @@ def run_pipeline(contract_a_data: ContractA) -> None:
         workflows_list.append(
             {
                 "id": workflow_id,
-                "workflow_name": wf_name,
+                "system_name": system_name,
+                "display_name": display_name,
                 "risk_level": risk,
                 "cluster_size": len(comm_endpoints),
                 "confidence": confidence,

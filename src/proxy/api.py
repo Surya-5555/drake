@@ -95,7 +95,7 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
 
 
 class UpdateWorkflowPayload(BaseModel):
-    workflowName: str
+    displayName: str
     generatedDescription: str
 
 
@@ -190,7 +190,8 @@ async def get_pending_workflows() -> List[Dict[str, Any]]:
                 return [
                     {
                         "id": r["id"],
-                        "workflowName": r["workflow_name"],
+                        "systemName": r["system_name"],
+                        "displayName": r["display_name"],
                         "riskLevel": r["risk_level"],
                         "clusterSize": r["cluster_size"],
                         "confidence": r["confidence"],
@@ -229,8 +230,8 @@ async def approve_workflow(workflow_id: str) -> Dict[str, str]:
     await log_audit_event_async(
         "workflow_approved",
         "success",
-        f"Approved workflow cluster '{wf['workflow_name']}'",
-        wf["workflow_name"],
+        f"Approved workflow cluster '{wf['display_name']}'",
+        wf["system_name"],
         "admin",
     )
 
@@ -261,8 +262,8 @@ async def reject_workflow(
     await log_audit_event_async(
         "workflow_rejected",
         "success",
-        f"Rejected workflow '{wf['workflow_name']}'. Reason: {payload.reason}",
-        wf["workflow_name"],
+        f"Rejected workflow '{wf['display_name']}'. Reason: {payload.reason}",
+        wf["system_name"],
         "admin",
     )
 
@@ -285,8 +286,8 @@ async def update_workflow(
             raise HTTPException(status_code=404, detail="Workflow not found")
 
         await db.execute(
-            "UPDATE workflows SET workflow_name = ?, generated_description = ? WHERE id = ?",
-            (payload.workflowName, payload.generatedDescription, workflow_id),
+            "UPDATE workflows SET display_name = ?, generated_description = ? WHERE id = ?",
+            (payload.displayName, payload.generatedDescription, workflow_id),
         )
         await db.commit()
 
@@ -303,8 +304,8 @@ async def update_workflow(
     await log_audit_event_async(
         "workflow_updated",
         "success",
-        f"Updated name to '{payload.workflowName}' and description.",
-        payload.workflowName,
+        f"Updated name to '{payload.displayName}' and description.",
+        payload.displayName,
         "admin",
     )
 
@@ -312,7 +313,8 @@ async def update_workflow(
 
     return {
         "id": updated_wf["id"],
-        "workflowName": updated_wf["workflow_name"],
+        "systemName": updated_wf["system_name"],
+        "displayName": updated_wf["display_name"],
         "riskLevel": updated_wf["risk_level"],
         "clusterSize": updated_wf["cluster_size"],
         "confidence": updated_wf["confidence"],
@@ -399,7 +401,8 @@ async def get_graph() -> Dict[str, Any]:
         communities_list = [
             {
                 "id": wf["community_id"] or wf["id"],
-                "workflowName": wf["workflow_name"],
+                "systemName": wf["system_name"],
+                "displayName": wf["display_name"],
                 "size": wf["cluster_size"],
                 "confidence": wf["confidence"],
             }
@@ -456,7 +459,8 @@ async def get_metrics() -> Dict[str, Any]:
 
         distribution = [
             {
-                "workflowName": wf["workflow_name"],
+                "systemName": wf["system_name"],
+                "displayName": wf["display_name"],
                 "endpointCount": wf["cluster_size"],
             }
             for wf in wfs
@@ -513,7 +517,7 @@ async def sync_workflow_mappings_async() -> None:
 
             steps_mapping = {}
             for wf in approved_wfs:
-                name = wf["workflow_name"]
+                name = wf["system_name"]
                 async with db.execute(
                     "SELECT * FROM endpoints WHERE community_id = ? ORDER BY operation_id",
                     (wf["community_id"],),
