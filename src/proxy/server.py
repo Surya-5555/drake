@@ -177,17 +177,38 @@ async def lifespan(app: FastAPI):
     # Startup actions
     logger.info("Lifespan startup: initializing database and loading approved tools...")
     await init_db()
+
+    # Sync governance.db state (Leiden clusters) to mcp_proxy.db
+    try:
+        from src.core.database import sync_governance_to_mcp_proxy
+        await sync_governance_to_mcp_proxy()
+        logger.info("Successfully synchronized governance.db to mcp_proxy.db at startup.")
+    except Exception as e:
+        logger.error(f"Failed to sync governance.db to mcp_proxy.db at startup: {e}")
+
     await load_approved_tools_from_db()
     yield
     # Shutdown actions
     logger.info("Lifespan shutdown complete.")
 
 
+from fastapi.middleware.cors import CORSMiddleware
+from src.proxy.api import app as api_app
+
 # Initialize standard FastAPI app
 app = FastAPI(
     title="Dell Enterprise MCP Proxy API Server",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # REST Webhooks
@@ -271,3 +292,6 @@ async def reload():
 
 # Mount the MCP server to FastAPI using FastMCP's ASGI/SSE integration
 app.mount("/mcp", mcp.http_app(transport="sse"))
+
+# Mount the governance API app
+app.mount("/", api_app)

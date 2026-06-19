@@ -98,6 +98,37 @@ async def get_pending_workflows() -> List[Dict[str, Any]]:
         )
 
 
+async def sync_workflow_state_to_mcp(
+    workflow_id: str,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    status_str: Optional[str] = None,
+) -> None:
+    """Sync a workflow state change from governance.db to mcp_proxy.db."""
+    from sqlalchemy.future import select
+    from src.core.database import async_session, Workflow
+
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(Workflow).where(Workflow.id == workflow_id)
+            )
+            wf = result.scalar_one_or_none()
+            if wf:
+                if name is not None:
+                    wf.name = name
+                if description is not None:
+                    wf.description = description
+                if status_str is not None:
+                    wf.status = status_str
+                await session.commit()
+                logger.info(f"Successfully synced state for workflow '{workflow_id}' to mcp_proxy.db.")
+            else:
+                logger.warning(f"Workflow '{workflow_id}' not found in mcp_proxy.db during sync.")
+    except Exception as e:
+        logger.error(f"Error syncing workflow state to mcp_proxy.db: {e}")
+
+
 @app.post("/api/v1/workflows/{workflow_id}/approve")
 async def approve_workflow(workflow_id: str) -> Dict[str, str]:
     """Approve a workflow cluster to make it eligible for FastMCP registration."""
@@ -126,6 +157,7 @@ async def approve_workflow(workflow_id: str) -> Dict[str, str]:
 
     # Syncapproved workflows to the shared workflow_mapping.json file
     sync_workflow_mappings()
+    await sync_workflow_state_to_mcp(workflow_id, status_str="approved")
 
     return {"status": "approved"}
 
@@ -158,6 +190,7 @@ async def reject_workflow(workflow_id: str, payload: RejectWorkflowPayload) -> D
 
     # Syncapproved workflows to the shared workflow_mapping.json file
     sync_workflow_mappings()
+    await sync_workflow_state_to_mcp(workflow_id, status_str="rejected")
 
     return {"status": "rejected"}
 
@@ -190,6 +223,11 @@ async def update_workflow(workflow_id: str, payload: UpdateWorkflowPayload) -> D
 
     # Syncapproved workflows to the shared workflow_mapping.json file
     sync_workflow_mappings()
+    await sync_workflow_state_to_mcp(
+        workflow_id,
+        name=payload.workflowName,
+        description=payload.generatedDescription,
+    )
 
     # Query updated workflow object
     workflows = get_workflows()
@@ -208,8 +246,17 @@ async def reload_mcp() -> Dict[str, str]:
     try:
         set_pipeline_status("mcpRuntimeStatus", "running")
         sync_workflow_mappings()
+
+        # Trigger reload of tools in server.py
+        try:
+            from src.proxy.server import reload as server_reload
+            await server_reload()
+            logger.info("Successfully triggered server.py reload.")
+        except Exception as e:
+            logger.warning(f"Could not trigger server.py reload directly: {e}")
+
         set_pipeline_status("mcpRuntimeStatus", "complete")
-        
+
         log_audit_event(
             "mcp_registered",
             "success",

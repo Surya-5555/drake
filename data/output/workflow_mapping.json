@@ -1,14 +1,62 @@
 {
   "workflows": {
-    "edited_systems_workflow": {
-      "name": "edited_systems_workflow",
-      "description": "Edited description",
+    "v1_query_workflow": {
+      "name": "v1_query_workflow",
+      "description": "Observability layer for V1. Integrates v1 REST operations. Configured with 1 underlying endpoints.",
       "steps": [
         {
           "step_id": 1,
-          "name": "GET_/redfish/v1/Systems",
+          "name": "GET_/redfish/v1",
           "method": "GET",
-          "url": "/redfish/v1/Systems",
+          "url": "/redfish/v1",
+          "params": {}
+        }
+      ]
+    },
+    "v1_update_workflow": {
+      "name": "v1_update_workflow",
+      "description": "Management layer for V1. Integrates v1 REST operations. Configured with 6 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "POST_/redfish/v1/AccountService/Accounts",
+          "method": "POST",
+          "url": "/redfish/v1/AccountService/Accounts",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "POST_/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Actions/ComputerSystem.Reset",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "GET_/redfish/v1/AccountService/Accounts",
+          "method": "GET",
+          "url": "/redfish/v1/AccountService/Accounts",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "POST_/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
+          "method": "POST",
+          "url": "/redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate",
+          "params": {}
+        },
+        {
+          "step_id": 6,
+          "name": "PATCH_/redfish/v1/Systems/{ComputerSystemId}",
+          "method": "PATCH",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}",
           "params": {}
         }
       ]

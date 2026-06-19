@@ -254,6 +254,7 @@ def get_workflows(approved_only: bool = False, pending_only: bool = False) -> Li
                         "operationId": ep["operation_id"],
                         "method": ep["method"],
                         "url": ep["url"],
+                        "path": ep["url"],
                     }
                 )
 
@@ -267,7 +268,13 @@ def get_workflows(approved_only: bool = False, pending_only: bool = False) -> Li
             if not underlying:
                 # Search for direct match
                 underlying = [
-                    ep for ep in endpoints if ep["operation_id"] == wf_id
+                    {
+                        "operationId": ep["operation_id"],
+                        "method": ep["method"],
+                        "url": ep["url"],
+                        "path": ep["url"],
+                    }
+                    for ep in endpoints if ep["operation_id"] == wf_id
                 ]
 
             results.append(
@@ -334,3 +341,85 @@ async def init_db() -> None:
     """Initialize database tables asynchronously if they do not exist."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+async def sync_governance_to_mcp_proxy() -> None:
+    """
+    Synchronizes all workflows and their steps from governance.db (sync sqlite)
+    to mcp_proxy.db (async SQLAlchemy/aiosqlite).
+    Preserves status mapping:
+      - 0 -> pending
+      - 1 -> approved
+      - 2 -> rejected
+    """
+    import sqlite3
+    from sqlalchemy.future import select
+    from sqlalchemy.orm import selectinload
+
+    # Retrieve data from governance.db
+    DB_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "governance.db"
+    if not DB_FILE.exists():
+        return
+
+    conn = sqlite3.connect(str(DB_FILE))
+    conn.row_factory = sqlite3.Row
+    cursor = conn.execute("SELECT * FROM workflows")
+    gov_workflows = [dict(row) for row in cursor.fetchall()]
+
+    cursor = conn.execute("SELECT * FROM endpoints")
+    gov_endpoints = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+
+    # Group endpoints by community_id
+    from collections import defaultdict
+    community_to_endpoints = defaultdict(list)
+    for ep in gov_endpoints:
+        if ep["community_id"]:
+            community_to_endpoints[ep["community_id"]].append(ep)
+
+    async with async_session() as session:
+        for gwf in gov_workflows:
+            wf_id = gwf["id"]
+            comm_id = gwf["community_id"] or wf_id
+
+            # Map status
+            status_map = {0: "pending", 1: "approved", 2: "rejected"}
+            status_str = status_map.get(gwf["approved"], "pending")
+
+            # Check if this workflow already exists in mcp_proxy.db
+            result = await session.execute(
+                select(Workflow).where(Workflow.id == wf_id).options(selectinload(Workflow.steps))
+            )
+            wf = result.scalar_one_or_none()
+
+            if not wf:
+                wf = Workflow(
+                    id=wf_id,
+                    name=gwf["workflow_name"],
+                    description=gwf["generated_description"],
+                    risk_level=gwf["risk_level"],
+                    status=status_str,
+                )
+                session.add(wf)
+            else:
+                # Update existing
+                wf.name = gwf["workflow_name"]
+                wf.description = gwf["generated_description"]
+                wf.risk_level = gwf["risk_level"]
+                wf.status = status_str
+
+            # Synchronize steps
+            underlying = community_to_endpoints[comm_id]
+            if not underlying:
+                underlying = [ep for ep in gov_endpoints if ep["operation_id"] == wf_id]
+
+            # Clear old steps and recreate
+            wf.steps.clear()
+            for ep in underlying:
+                step = EndpointStep(
+                    method=ep["method"],
+                    path=ep["url"],
+                )
+                wf.steps.append(step)
+
+        await session.commit()
