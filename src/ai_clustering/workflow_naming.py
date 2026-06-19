@@ -82,7 +82,7 @@ def generate_system_name(endpoints: List[Dict[str, Any]]) -> str:
         
         all_tokens = tags + segments
         counter = Counter(all_tokens)
-        token_freq_log = "\n".join(f"{t}: {c}" for t, c in counter.most_common(5)) if counter else "none"
+        token_freq_log = "\n".join(f"{t} -> {c}" for t, c in counter.most_common()) if counter else "none"
         
         selected_tokens_log = f"{base}\n{action}"
         
@@ -90,14 +90,17 @@ def generate_system_name(endpoints: List[Dict[str, Any]]) -> str:
         comm_id = endpoints[0].get("community_id", "Unknown") if endpoints else "Unknown"
         # The community_id might not be set yet when generate_system_name is called, but we can try
         
+        endpoints_log = "\n".join(f"{ep.get('method', 'GET')} {ep.get('url', '')}" for ep in endpoints)
+        
         content = (
             f"Community:\n{comm_id.replace('wf_', '')}\n\n"
+            f"Endpoints:\n\n{endpoints_log}\n\n"
             f"Path Tokens:\n\n{path_tokens_log}\n\n"
             f"Tag Tokens:\n\n{tag_tokens_log}\n\n"
-            f"Token Frequencies:\n\n{token_freq_log}\n\n"
-            f"Selected Tokens:\n\n{selected_tokens_log}\n\n"
-            f"Generated System Name:\n\n{system_name}"
+            f"Frequency Table:\n\n{token_freq_log}\n\n"
+            f"Selected:\n\n{selected_tokens_log}\n\n"
+            f"Generated:\n\n{system_name}"
         )
-        explain_print("SYSTEM NAME GENERATION", content)
+        explain_print("WORKFLOW NAME CALCULATION", content)
     
     return system_name

@@ -107,8 +107,15 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
                 (semantic_score * 0.6) + (tag_score * 0.25) + (path_score * 0.15)
             )
             final_weights[j] = final_weight
-
         from src.ai_clustering.explain import is_explain_mode, explain_print
+
+        # Get indices of top k elements
+        if num_nodes - 1 < k:
+            top_k_indices = np.argsort(final_weights)[::-1]
+            top_k_indices = [idx for idx in top_k_indices if idx != i]
+        else:
+            top_k_indices = np.argsort(final_weights)[::-1][1 : k + 1]
+
         if is_explain_mode() and num_nodes > 1:
             # Sort all neighbors to log top neighbors for STAGE 4
             all_sorted_indices = np.argsort(final_weights)[::-1]
@@ -120,48 +127,24 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
                 t_score = compute_tag_similarity(tags_i, endpoints[n_idx].get("tags", []))
                 p_score = compute_path_similarity(url_i, endpoints[n_idx].get("url", ""))
                 f_score = final_weights[n_idx]
+                
+                accepted = "YES" if f_score > threshold and n_idx in top_k_indices else "NO"
+                
                 top_neighbors_log += (
-                    f"{rank}.\n{endpoints[n_idx]['operation_id']}\n"
-                    f"Semantic: {s_score:.2f}\n"
-                    f"Tag: {t_score:.2f}\n"
-                    f"Path: {p_score:.2f}\n"
-                    f"Final: {f_score:.2f}\n\n"
+                    f"Endpoint:\n{op_id_i}\n\n"
+                    f"Neighbor:\n{endpoints[n_idx]['operation_id']}\n\n"
+                    f"Semantic:\n{s_score:.2f}\n\n"
+                    f"Path:\n{p_score:.2f}\n\n"
+                    f"Tag:\n{t_score:.2f}\n\n"
+                    f"Final:\n{f_score:.2f}\n\n"
+                    f"Accepted:\n{accepted}\n\n"
                 )
-            
-            content = f"SOURCE:\n{op_id_i}\n\nTOP NEIGHBORS:\n\n{top_neighbors_log.strip()}"
-            explain_print("SIMILARITY ANALYSIS", content)
-
-        # Get indices of top k elements
-        if num_nodes - 1 < k:
-            top_k_indices = np.argsort(final_weights)[::-1]
-        else:
-            top_k_indices = np.argpartition(final_weights, -k)[-k:]
-            # Sort the top k indices
-            top_k_indices = top_k_indices[np.argsort(final_weights[top_k_indices])][
-                ::-1
-            ]
+            explain_print(f"NEAREST NEIGHBORS FOR {op_id_i}", top_neighbors_log.strip())
 
         for j in top_k_indices:
             weight = final_weights[j]
             op_id_j = endpoints[j]["operation_id"]
             
-            if is_explain_mode():
-                s_score = float(sim_matrix[i][j])
-                t_score = compute_tag_similarity(tags_i, endpoints[j].get("tags", []))
-                p_score = compute_path_similarity(url_i, endpoints[j].get("url", ""))
-                status = "PASSED" if weight > threshold else "FAILED"
-                
-                content = (
-                    f"Source:\n{op_id_i}\n\n"
-                    f"Target:\n{op_id_j}\n\n"
-                    f"Semantic:\n{s_score:.2f}\n\n"
-                    f"Tag:\n{t_score:.2f}\n\n"
-                    f"Path:\n{p_score:.2f}\n\n"
-                    f"Final Weight:\n{weight:.2f}\n\n"
-                    f"Threshold:\n{status}"
-                )
-                explain_print("GRAPH EDGE CREATED" if status == "PASSED" else "GRAPH EDGE REJECTED", content)
-
             if weight > threshold:
                 # networkx Graph is undirected, so adding (i, j) or (j, i) is the same.
                 if not G.has_edge(op_id_i, op_id_j):
@@ -225,18 +208,6 @@ def detect_communities(G: nx.Graph) -> List[Set[str]]:
         communities = []
         for comm in partition:
             communities.append(set(nodes[i] for i in comm))
-
-        from src.ai_clustering.explain import is_explain_mode, explain_print
-        if is_explain_mode():
-            for idx, comm in enumerate(communities, 1):
-                comm_id_local = f"C_{idx:03d}"
-                members_list = "\n".join(nodes[i] for i in comm)
-                content = (
-                    f"Community:\n{comm_id_local}\n\n"
-                    f"Members:\n\n{members_list}\n\n"
-                    f"Community Size:\n{len(comm)}"
-                )
-                explain_print("LEIDEN COMMUNITY", content)
 
         return communities
     except ImportError as err:
@@ -315,12 +286,14 @@ def generate_semantic_label(
 
             from src.ai_clustering.explain import is_explain_mode, explain_print
             if is_explain_mode():
-                content = (
-                    f"SYSTEM NAME:\n\n{system_name}\n\n"
-                    f"ENDPOINTS:\n\n{endpoint_summaries}\n\n"
-                    f"FULL PROMPT:\n\n{prompt}"
+                members_str = "\n".join(f"- {ep['method']} {ep['url']}" for ep in endpoints)
+                before_content = (
+                    f"system_name:\n{system_name}\n\n"
+                    f"community:\n{workflow_id.replace('wf_', '')}\n\n"
+                    f"members:\n{members_str}"
                 )
-                explain_print("PROMPT TO OLLAMA", content)
+                explain_print("BEFORE LLM", before_content)
+                explain_print("PROMPT SENT", prompt.strip())
 
             data = service.generate_workflow_mapping(prompt)
 
@@ -337,12 +310,10 @@ def generate_semantic_label(
 
                 if is_explain_mode():
                     content = (
-                        f"Community:\n{workflow_id.replace('wf_', '')}\n\n"
-                        f"MATHEMATICAL NAME:\n\n{system_name}\n\n"
-                        f"↓\n\nLLM DISPLAY NAME:\n\n{display_name}\n\n"
-                        f"↓\n\nDESCRIPTION:\n\n{desc}"
+                        f"display_name:\n{display_name}\n\n"
+                        f"description:\n{desc}"
                     )
-                    explain_print("WORKFLOW NAMING TRANSFORMATION", content)
+                    explain_print("AFTER LLM", content)
 
                 return system_name, display_name, desc, 0.95
         except Exception as err:
@@ -352,12 +323,10 @@ def generate_semantic_label(
 
     if is_explain_mode():
         content = (
-            f"Community:\n{workflow_id.replace('wf_', '')}\n\n"
-            f"MATHEMATICAL NAME:\n\n{system_name}\n\n"
-            f"↓\n\nHEURISTIC DISPLAY NAME:\n\n{fallback_display_name}\n\n"
-            f"↓\n\nDESCRIPTION:\n\n{heuristic_desc}"
+            f"display_name:\n{fallback_display_name}\n\n"
+            f"description:\n{heuristic_desc}"
         )
-        explain_print("WORKFLOW NAMING TRANSFORMATION", content)
+        explain_print("AFTER LLM (FALLBACK)", content)
 
     return system_name, fallback_display_name, heuristic_desc, 0.85
 
@@ -417,6 +386,22 @@ def run_pipeline(contract_a_data: ContractA) -> None:
     # Detect communities
     communities = detect_communities(G)
 
+    if is_explain_mode():
+        from src.ai_clustering.explain import explain_print
+        for idx, comm_node_ids in enumerate(communities, 1):
+            comm_id = f"c_{idx:03d}"
+            members = []
+            for n_idx, op_id in enumerate(comm_node_ids, 1):
+                ep = next(e for e in endpoints if e["operation_id"] == op_id)
+                members.append(f"{n_idx}. {ep['method']} {ep.get('url', '')}")
+            members_str = "\n".join(members)
+            content = (
+                f"Community ID:\n{comm_id}\n\n"
+                f"Members:\n{members_str}\n\n"
+                f"Total:\n{len(comm_node_ids)} endpoints"
+            )
+            explain_print("COMMUNITY DISCOVERY", content)
+
     # Update endpoints in DB with deterministic MD5 community IDs
     updated_endpoints = []
     workflows_list = []
@@ -450,6 +435,7 @@ def run_pipeline(contract_a_data: ContractA) -> None:
             risk = "high"
         elif "PATCH" in methods or "PUT" in methods:
             risk = "medium"
+        else:
             risk = "low"
 
         workflows_list.append(
@@ -465,16 +451,17 @@ def run_pipeline(contract_a_data: ContractA) -> None:
             }
         )
         
-        from src.ai_clustering.explain import is_explain_mode, explain_print
         if is_explain_mode():
             content = (
                 f"workflow_id:\n{workflow_id}\n\n"
                 f"community_id:\n{comm_id}\n\n"
                 f"system_name:\n{system_name}\n\n"
                 f"display_name:\n{display_name}\n\n"
+                f"risk:\n{risk}\n\n"
+                f"description:\n{wf_desc}\n\n"
                 f"approved:\n0"
             )
-            explain_print("WORKFLOW SAVED", content)
+            explain_print("DATABASE RECORD PREVIEW", content)
 
     save_endpoints(updated_endpoints)
     save_workflows(workflows_list)
