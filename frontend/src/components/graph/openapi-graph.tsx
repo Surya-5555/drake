@@ -38,11 +38,18 @@ function layoutNodes(nodes: GraphNode[], communityColor: Map<string, string>): N
     const communityIndex = communityOffsets.get(node.communityId) ?? 0;
     communityOffsets.set(node.communityId, communityIndex + 1);
 
+    let commHash = 0;
+    for (let i = 0; i < node.communityId.length; i++) {
+      commHash = (commHash << 5) - commHash + node.communityId.charCodeAt(i);
+      commHash |= 0;
+    }
+    const safeCommId = Math.abs(commHash % 20);
+
     const hasPosition = node.x !== undefined && node.y !== undefined;
     const position = hasPosition
       ? { x: node.x!, y: node.y! }
       : {
-          x: (communityIndex % 5) * 220 + Number.parseInt(node.communityId, 10) * 40,
+          x: (communityIndex % 5) * 220 + safeCommId * 60,
           y: Math.floor(communityIndex / 5) * 120 + index * 8,
         };
 
