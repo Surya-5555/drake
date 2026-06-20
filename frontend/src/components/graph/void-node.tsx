@@ -91,7 +91,7 @@ export function VoidNode({ data, selected }: any) {
               </span>
             )}
           </div>
-          <span className="text-base font-bold text-gray-900 tracking-tight truncate block w-full" title={label}>
+          <span className="text-sm font-medium text-gray-900 truncate block w-full" title={label}>
             {label}
           </span>
         </div>

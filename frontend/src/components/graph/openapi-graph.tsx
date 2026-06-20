@@ -260,7 +260,7 @@ export function OpenApiGraph() {
                     setSelectedNodeData(comm);
                   }
                 }}
-                className={`w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-['JetBrains_Mono'] transition-colors ${
+                className={`w-full flex items-center gap-2 px-2 py-2 text-left text-sm transition-colors ${
                   graphClusterFilter === comm.id ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:text-gray-900"
                 }`}
               >
@@ -284,7 +284,7 @@ export function OpenApiGraph() {
                           }
                         }
                       }}
-                      className={`w-full flex items-center text-left gap-2 px-2 py-1.5 text-[10px] font-['JetBrains_Mono'] transition-colors cursor-pointer ${
+                      className={`w-full flex items-center text-left gap-2 px-2 py-1.5 text-sm transition-colors cursor-pointer ${
                         selectedNodeData && "id" in selectedNodeData && selectedNodeData.id === n.id ? "bg-gray-100 text-gray-900 font-semibold border-l-2 border-blue-500 -ml-[2px]" : "text-gray-500 hover:text-gray-900"
                       }`}
                     >
@@ -314,13 +314,13 @@ export function OpenApiGraph() {
           )}
           <div className="bg-white border border-gray-200 px-3 py-1.5 rounded-sm flex items-center gap-2 shadow-xl">
           {isCommunityView ? (
-             <span className="text-xs font-['JetBrains_Mono'] text-gray-500">GLOBAL / CLUSTER TOPOLOGY</span>
+             <span className="text-xs text-gray-500">GLOBAL / CLUSTER TOPOLOGY</span>
           ) : (
             <div className="flex items-center gap-2">
-              <button onClick={() => setGraphClusterFilter(null)} className="text-gray-500 hover:text-gray-900 text-xs font-['JetBrains_Mono']">
+              <button onClick={() => setGraphClusterFilter(null)} className="text-gray-500 hover:text-gray-900 text-xs">
                  [ BACK ]
               </button>
-              <span className="text-xs font-['JetBrains_Mono'] text-blue-600">/ {graphClusterFilter}</span>
+              <span className="text-xs text-blue-600">/ {graphClusterFilter}</span>
             </div>
           )}
           </div>
@@ -376,31 +376,31 @@ export function OpenApiGraph() {
           {!selectedNodeData ? (
              <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-3 opacity-50">
                <Desktop size={48} weight="duotone" />
-               <p className="text-xs font-['JetBrains_Mono']">NO_TARGET_ACQUIRED</p>
+               <p className="text-xs">NO_TARGET_ACQUIRED</p>
              </div>
           ) : (
             <>
               {/* Target Identity */}
               <div className="space-y-2">
-                 <div className="text-[10px] text-blue-600 font-['JetBrains_Mono'] uppercase tracking-widest">Target Identity</div>
-                 <div className="p-3 bg-gray-50 border border-gray-200 rounded-sm font-['JetBrains_Mono'] text-xs break-all">
+                 <div className="text-[10px] text-blue-600 uppercase tracking-widest font-semibold">Target Identity</div>
+                 <div className="p-3 bg-gray-50 border border-gray-200 rounded-sm text-xs break-all">
                     {"workflowName" in selectedNodeData ? selectedNodeData.workflowName : selectedNodeData.label}
                  </div>
               </div>
 
               {/* Resource Metrics */}
               <div className="space-y-2">
-                 <div className="text-[10px] text-gray-500 font-['JetBrains_Mono'] uppercase tracking-widest">Resource Footprint</div>
+                 <div className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Resource Footprint</div>
                  <div className="grid grid-cols-2 gap-2">
                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-sm flex flex-col gap-1">
                       <div className="text-[10px] text-gray-500 flex items-center gap-1"><Coins size={12}/> Tokens</div>
-                      <div className="text-sm font-['JetBrains_Mono'] text-gray-900">
+                      <div className="text-sm text-gray-900 font-medium">
                         {"workflowName" in selectedNodeData ? (selectedNodeData.size * 142) : Math.floor(Math.random() * 500 + 100)}
                       </div>
                    </div>
                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-sm flex flex-col gap-1">
                       <div className="text-[10px] text-gray-500 flex items-center gap-1"><Graph size={12}/> Weight</div>
-                      <div className="text-sm font-['JetBrains_Mono'] text-gray-900">
+                      <div className="text-sm text-gray-900 font-medium">
                         {"workflowName" in selectedNodeData ? `${selectedNodeData.size} Nodes` : 'O(1)'}
                       </div>
                    </div>
@@ -409,8 +409,8 @@ export function OpenApiGraph() {
 
               {/* Console Output Mock */}
               <div className="space-y-2 pt-4">
-                 <div className="text-[10px] text-gray-500 font-['JetBrains_Mono'] uppercase tracking-widest">Inspector Log</div>
-                 <div className="p-3 bg-gray-100 border border-gray-200 rounded-sm font-['JetBrains_Mono'] text-[10px] text-gray-800 leading-relaxed opacity-80 h-32 overflow-y-auto">
+                 <div className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Inspector Log</div>
+                 <div className="p-3 bg-gray-100 border border-gray-200 rounded-sm text-[10px] text-gray-800 leading-relaxed opacity-80 h-32 overflow-y-auto">
                     {`> INIT_INSPECTOR()\n`}
                     {`> TARGET_ID: ${selectedNodeData.id}\n`}
                     {"workflowName" in selectedNodeData ? 

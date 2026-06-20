@@ -30,7 +30,7 @@ export function Sidebar() {
       <div className="px-8 py-10">
         <h1 className="text-xl font-bold text-[rgb(var(--foreground))] flex items-center gap-3">
           <div className="w-5 h-5 bg-[rgb(var(--primary))] rounded-[4px] rotate-45 shadow-[2px_2px_10px_rgba(189,229,108,0.5)]"></div>
-          Atomie<span className="text-[10px] align-top text-gray-400 font-normal mt-1">TM</span>
+          Drake<span className="text-[10px] align-top text-gray-400 font-normal mt-1">TM</span>
         </h1>
       </div>
       <nav aria-label="Primary navigation" className="space-y-1.5 px-4 flex-1">

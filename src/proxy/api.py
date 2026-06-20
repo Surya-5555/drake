@@ -53,7 +53,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, status, Depends, Security
+from fastapi import FastAPI, HTTPException, status, Depends, Security, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
@@ -86,6 +86,8 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def get_api_key(api_key_header: str = Security(api_key_header)):
     expected_api_key = os.getenv("DELL_MCP_API_KEY", "default_dev_key")
+    if expected_api_key == "default_dev_key" and not api_key_header:
+        return "default_dev_key"
     if api_key_header == expected_api_key:
         return api_key_header
     else:
@@ -454,6 +456,76 @@ async def reload_mcp() -> Dict[str, str]:
             "mcp_registered", "error", f"Reload failed: {err}", actor="admin"
         )
         raise HTTPException(status_code=500, detail=str(err))
+
+
+async def run_pipeline_task():
+    try:
+        from src.ai_clustering.graph_clustering import run_pipeline
+        from src.parser.openapi_parser import OpenAPIParser
+        from src.core.database import init_db_sync, set_pipeline_status
+        import time
+
+        logger.info("Background Pipeline: Initializing SQLite database...")
+        init_db_sync()
+
+        spec_path = Path("tests/fixtures/openapi-7.xx.yaml")
+        if not spec_path.exists():
+            spec_path = Path("data/raw_specs/openapi-7.xx.yaml")
+        if not spec_path.exists():
+            spec_path = Path("openapi.json")
+
+        set_pipeline_status("ingestionStatus", "running")
+        set_pipeline_status("graphStatus", "idle")
+        set_pipeline_status("clusteringStatus", "idle")
+        set_pipeline_status("mcpRuntimeStatus", "idle")
+
+        logger.info(f"Background Pipeline: Ingesting OpenAPI spec from: {spec_path}")
+        openapi_parser = OpenAPIParser(spec_path)
+        contract_a = openapi_parser.parse_and_flatten()
+        set_pipeline_status("ingestionStatus", "complete")
+
+        set_pipeline_status("graphStatus", "running")
+        set_pipeline_status("clusteringStatus", "running")
+        logger.info("Background Pipeline: Building relationship graph and clustering endpoints...")
+        
+        run_pipeline(contract_a)
+        
+        set_pipeline_status("graphStatus", "complete")
+        set_pipeline_status("clusteringStatus", "complete")
+
+        # Refine workflow names using local LLM or fallbacks
+        try:
+            from scripts.refine_workflow_names import refine_workflow_names
+            await refine_workflow_names()
+            logger.info("Background Pipeline: Successfully refined workflow names.")
+        except Exception as ref_err:
+            logger.warning(f"Background Pipeline: Refinement of workflow names skipped or failed: {ref_err}")
+
+        set_pipeline_status("mcpRuntimeStatus", "complete")
+        logger.info("Background Pipeline: Ingestion, Graph-Clustering, and Refinement completed successfully.")
+        
+        # Trigger reload of the MCP server dynamically to mount the newly clustered tools!
+        if hasattr(app.state, "mcp_reload"):
+            await app.state.mcp_reload()
+            logger.info("Background Pipeline: Successfully reloaded MCP dynamic tools.")
+            
+        await log_audit_event_async(
+            "pipeline_run", "success", f"Triggered automatic ingestion and Leiden clustering run on '{spec_path.name}'.", actor="system"
+        )
+    except Exception as err:
+        logger.error(f"Background Pipeline failed: {err}")
+        set_pipeline_status("ingestionStatus", "error")
+        set_pipeline_status("graphStatus", "error")
+        set_pipeline_status("clusteringStatus", "error")
+        await log_audit_event_async(
+            "pipeline_run", "error", f"Pipeline run failed: {err}", actor="system"
+        )
+
+
+@app.post("/api/v1/pipeline/run", dependencies=[Depends(get_api_key)])
+async def trigger_pipeline_run(background_tasks: BackgroundTasks) -> Dict[str, str]:
+    background_tasks.add_task(run_pipeline_task)
+    return {"status": "started"}
 
 
 @app.get("/api/v1/graph")

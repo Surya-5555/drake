@@ -1,13 +1,16 @@
 "use client";
 
-import { Play, RefreshCw, User } from "lucide-react";
+import { Play, RefreshCw, User, Send } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useOverview } from "@/hooks/use-overview";
+import { useRunPipeline, usePublishPipeline } from "@/hooks/use-workflows";
 
 export function Topbar() {
   const pathname = usePathname();
   const { isFetching, refetch } = useOverview();
+  const runPipelineMutation = useRunPipeline();
+  const publishPipelineMutation = usePublishPipeline();
 
   // Create a simple breadcrumb from pathname
   const pageName = pathname === "/" ? "Overview" : pathname.substring(1).charAt(0).toUpperCase() + pathname.substring(2);
@@ -29,7 +32,7 @@ export function Topbar() {
 
         <Button
           aria-label="Refresh overview data"
-          disabled={isFetching}
+          disabled={isFetching || runPipelineMutation.isPending || publishPipelineMutation.isPending}
           onClick={() => refetch()}
           size="sm"
           variant="secondary"
@@ -40,18 +43,33 @@ export function Topbar() {
         </Button>
         
         <Button
+          aria-label="Run ingestion and clustering pipeline"
+          disabled={isFetching || runPipelineMutation.isPending || publishPipelineMutation.isPending}
+          onClick={() => runPipelineMutation.mutate()}
           size="sm"
           variant="secondary"
           className="rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 border-none shadow-none font-semibold text-xs"
         >
-          <Play className="mr-2 h-3 w-3" />
+          {runPipelineMutation.isPending ? (
+            <RefreshCw className="mr-2 h-3 w-3 animate-spin" />
+          ) : (
+            <Play className="mr-2 h-3 w-3" />
+          )}
           Run Once
         </Button>
         
         <Button
+          aria-label="Publish approved workflows to MCP runtime"
+          disabled={isFetching || runPipelineMutation.isPending || publishPipelineMutation.isPending}
+          onClick={() => publishPipelineMutation.mutate()}
           size="sm"
           className="rounded-full bg-[rgb(var(--primary))] hover:bg-[#a5cc5f] text-black font-semibold text-xs shadow-sm border-none"
         >
+          {publishPipelineMutation.isPending ? (
+            <RefreshCw className="mr-2 h-3 w-3 animate-spin text-black" />
+          ) : (
+            <Send className="mr-2 h-3 w-3 text-black" />
+          )}
           Publish
         </Button>
       </div>

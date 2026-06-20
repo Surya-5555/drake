@@ -49,7 +49,7 @@ export function AtomieEdge({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: "all",
             }}
-            className="nodrag nopan bg-white text-slate-500 text-[10px] font-['JetBrains_Mono'] font-medium px-2 py-0.5 rounded border border-slate-200 shadow-sm whitespace-nowrap"
+            className="nodrag nopan bg-white text-slate-500 text-[10px] font-medium px-2 py-0.5 rounded border border-slate-200 shadow-sm whitespace-nowrap"
           >
             {label}
           </div>

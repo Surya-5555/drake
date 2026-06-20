@@ -47,3 +47,19 @@ export function useUpdateWorkflow() {
     onSuccess: () => invalidateGovernanceQueries(queryClient),
   });
 }
+
+export function useRunPipeline() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.runPipeline,
+    onSuccess: () => invalidateGovernanceQueries(queryClient),
+  });
+}
+
+export function usePublishPipeline() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.reloadMcp,
+    onSuccess: () => invalidateGovernanceQueries(queryClient),
+  });
+}

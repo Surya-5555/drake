@@ -41,6 +41,11 @@ export const api = {
       method: "POST",
     }),
 
+  runPipeline: () =>
+    apiRequest<void>("/pipeline/run", {
+      method: "POST",
+    }),
+
   graph: () => apiRequest<GraphData>("/graph"),
 
   metrics: () => apiRequest<MetricsData>("/metrics"),

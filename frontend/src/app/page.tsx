@@ -53,38 +53,57 @@ export default function OverviewPage() {
             Monitor ingestion, graph clustering, approval posture, and MCP runtime registration from one governed surface.
           </p>
         </div>
-        
-        {/* Hand-drawn Annotation */}
-        <div className="absolute top-0 right-10 hidden md:flex flex-col items-center rotate-6">
-          <svg width="60" height="40" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[rgb(var(--primary))] opacity-80 mb-2">
-            <path d="M10 20C20 10 40 10 50 20M50 20L40 15M50 20L45 30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span className="font-['Caveat'] text-2xl text-[rgb(var(--primary))] tracking-wide transform -rotate-6">Looks great!</span>
-        </div>
       </section>
 
       <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {cards.map((card) => (
-          <Card key={card.key} className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[rgb(var(--primary))] opacity-10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-            <CardContent className="flex flex-col pt-6 relative z-10">
-              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-[rgb(var(--border))] mb-4">
-                <card.icon className="h-5 w-5 text-[rgb(var(--muted-foreground))]" />
+        {cards.map((card) => {
+          const CardContentComponent = (
+            <>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[rgb(var(--primary))] opacity-10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+              <CardContent className="flex flex-col pt-6 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-[rgb(var(--border))] mb-4">
+                  <card.icon className="h-5 w-5 text-[rgb(var(--muted-foreground))]" />
+                </div>
+                <p className="text-sm font-medium text-[rgb(var(--muted-foreground))]">{card.label}</p>
+                {isLoading ? (
+                  <Skeleton className="mt-2 h-10 w-20 rounded-lg" />
+                ) : (
+                  <p className="mt-1 text-4xl font-bold text-[rgb(var(--foreground))]">
+                    {data?.[card.key] ?? 0}
+                  </p>
+                )}
+              </CardContent>
+            </>
+          );
+
+          if (card.key === "registeredWorkflowCount") {
+            return (
+              <div key={card.key} className="relative">
+                <Card className="relative overflow-hidden group">
+                  {CardContentComponent}
+                </Card>
+                {/* Looks Great Annotation */}
+                {!isLoading && (
+                  <div className="absolute -top-14 -right-2 hidden md:flex flex-col items-center pointer-events-none select-none z-20">
+                    <span className="font-['Caveat'] text-2xl text-[rgb(var(--primary))] tracking-wide rotate-[4deg]">Looks great!</span>
+                    <svg width="45" height="30" viewBox="0 0 45 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[rgb(var(--primary))] opacity-80 mt-1 -rotate-[10deg]">
+                      <path d="M35 5C27 10 18 18 13 24M13 24L21 25M13 24L15 15" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                )}
               </div>
-              <p className="text-sm font-medium text-[rgb(var(--muted-foreground))]">{card.label}</p>
-              {isLoading ? (
-                <Skeleton className="mt-2 h-10 w-20 rounded-lg" />
-              ) : (
-                <p className="mt-1 text-4xl font-bold text-[rgb(var(--foreground))]">
-                  {data?.[card.key] ?? 0}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+            );
+          }
+
+          return (
+            <Card key={card.key} className="relative overflow-hidden group">
+              {CardContentComponent}
+            </Card>
+          );
+        })}
       </section>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden mb-8">
         <CardHeader className="bg-gray-50/50 border-b border-[rgb(var(--border))]">
           <CardTitle className="text-lg">Pipeline Status</CardTitle>
         </CardHeader>
@@ -108,14 +127,6 @@ export default function OverviewPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Hand-drawn element for empty space decor */}
-      <div className="absolute -bottom-20 -left-10 opacity-20 pointer-events-none hidden lg:block">
-        <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="100" cy="100" r="80" stroke="currentColor" strokeWidth="2" strokeDasharray="10 10" className="text-[rgb(var(--primary))]"/>
-          <path d="M60 100C60 80 80 60 100 60" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-[rgb(var(--primary))]"/>
-        </svg>
-      </div>
     </div>
   );
 }
