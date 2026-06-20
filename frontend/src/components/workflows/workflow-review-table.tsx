@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, GitBranch, Pencil, X } from "lucide-react";
+import { Check, GitBranch, Pencil, X, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -205,6 +205,118 @@ function RejectWorkflowDialog({
   );
 }
 
+function WorkflowCard({
+  workflow,
+  onApprove,
+  onReject,
+  onEdit,
+  onViewInGraph,
+  isApprovePending,
+}: {
+  workflow: WorkflowCluster;
+  onApprove: (w: WorkflowCluster) => void;
+  onReject: (w: WorkflowCluster) => void;
+  onEdit: (w: WorkflowCluster) => void;
+  onViewInGraph: (w: WorkflowCluster) => void;
+  isApprovePending: boolean;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <Card className="p-4" key={workflow.id}>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+            <h3 className="text-base font-semibold text-slate-950 hover:underline">
+              {workflow.workflowName}
+            </h3>
+            <Badge tone={riskTone[workflow.riskLevel]}>
+              {workflow.riskLevel} risk
+            </Badge>
+            <Badge tone="neutral">{workflow.clusterSize} endpoints</Badge>
+            <Badge tone="default">
+              {Math.round(workflow.confidence * 100)}% confidence
+            </Badge>
+          </div>
+          <p className="mt-2 text-sm text-slate-600">
+            {workflow.generatedDescription}
+          </p>
+          
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIsExpanded(!isExpanded)} 
+            className="mt-2 -ml-3 text-slate-600 hover:bg-slate-100"
+          >
+            {isExpanded ? <ChevronUp className="h-4 w-4 mr-1"/> : <ChevronDown className="h-4 w-4 mr-1"/>}
+            {isExpanded ? "Hide endpoints" : `View ${workflow.underlyingEndpoints.length} underlying endpoints`}
+          </Button>
+
+          {isExpanded && (
+            <div className="mt-3 overflow-x-auto rounded-md border border-slate-200">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <caption className="sr-only">
+                  Underlying endpoints for {workflow.workflowName}
+                </caption>
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="py-2 pl-3 pr-3" scope="col">Method</th>
+                    <th className="py-2 pr-3" scope="col">Operation</th>
+                    <th className="py-2 pr-3" scope="col">Path</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {workflow.underlyingEndpoints.map((endpoint) => (
+                    <tr key={endpoint.operationId} className="hover:bg-slate-50">
+                      <td className="py-2 pl-3 pr-3 font-mono text-xs">
+                        {endpoint.method}
+                      </td>
+                      <td className="py-2 pr-3 font-mono text-xs">
+                        {endpoint.operationId}
+                      </td>
+                      <td className="py-2 pr-3 font-mono text-xs text-slate-600">
+                        {endpoint.path}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2 pt-1 xl:pt-0">
+          <Button
+            disabled={isApprovePending}
+            onClick={() => onApprove(workflow)}
+            size="sm"
+          >
+            <Check className="h-4 w-4 mr-1" />
+            Approve
+          </Button>
+          <Button
+            onClick={() => onReject(workflow)}
+            size="sm"
+            variant="destructive"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Reject
+          </Button>
+          <Button onClick={() => onEdit(workflow)} size="sm" variant="secondary">
+            <Pencil className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button asChild size="sm" variant="ghost">
+            <Link href="/graph" onClick={() => onViewInGraph(workflow)}>
+              <GitBranch className="h-4 w-4 mr-1" />
+              View graph
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function WorkflowReviewTable() {
   const { data, isLoading, error } = usePendingWorkflows();
   const approveWorkflow = useApproveWorkflow();
@@ -284,90 +396,15 @@ export function WorkflowReviewTable() {
       ) : null}
 
       {data.map((workflow) => (
-        <Card className="p-4" key={workflow.id}>
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base font-semibold text-slate-950">
-                  {workflow.workflowName}
-                </h3>
-                <Badge tone={riskTone[workflow.riskLevel]}>
-                  {workflow.riskLevel} risk
-                </Badge>
-                <Badge tone="neutral">{workflow.clusterSize} endpoints</Badge>
-                <Badge tone="default">
-                  {Math.round(workflow.confidence * 100)}% confidence
-                </Badge>
-              </div>
-              <p className="mt-2 text-sm text-slate-600">
-                {workflow.generatedDescription}
-              </p>
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
-                  <caption className="sr-only">
-                    Underlying endpoints for {workflow.workflowName}
-                  </caption>
-                  <thead className="text-xs uppercase text-slate-500">
-                    <tr>
-                      <th className="py-2 pr-3" scope="col">
-                        Method
-                      </th>
-                      <th className="py-2 pr-3" scope="col">
-                        Operation
-                      </th>
-                      <th className="py-2" scope="col">
-                        Path
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {workflow.underlyingEndpoints.map((endpoint) => (
-                      <tr className="border-t border-slate-100" key={endpoint.operationId}>
-                        <td className="py-2 pr-3 font-mono text-xs">
-                          {endpoint.method}
-                        </td>
-                        <td className="py-2 pr-3 font-mono text-xs">
-                          {endpoint.operationId}
-                        </td>
-                        <td className="py-2 font-mono text-xs text-slate-600">
-                          {endpoint.path}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <Button
-                disabled={approveWorkflow.isPending}
-                onClick={() => handleApprove(workflow)}
-                size="sm"
-              >
-                <Check className="h-4 w-4" />
-                Approve
-              </Button>
-              <Button
-                onClick={() => setRejecting(workflow)}
-                size="sm"
-                variant="destructive"
-              >
-                <X className="h-4 w-4" />
-                Reject
-              </Button>
-              <Button onClick={() => setEditing(workflow)} size="sm" variant="secondary">
-                <Pencil className="h-4 w-4" />
-                Edit
-              </Button>
-              <Button asChild size="sm" variant="ghost">
-                <Link href="/graph" onClick={() => handleViewInGraph(workflow)}>
-                  <GitBranch className="h-4 w-4" />
-                  View in graph
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </Card>
+        <WorkflowCard
+          key={workflow.id}
+          workflow={workflow}
+          onApprove={handleApprove}
+          onReject={setRejecting}
+          onEdit={setEditing}
+          onViewInGraph={handleViewInGraph}
+          isApprovePending={approveWorkflow.isPending}
+        />
       ))}
 
       <EditWorkflowDialog

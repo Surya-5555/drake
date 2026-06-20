@@ -49,8 +49,13 @@ class OllamaService:
 
     def generate_workflow_mapping(self, prompt: str) -> dict[str, Any]:
         """Request structured Contract B JSON from local Ollama."""
-        self._logger.info("Sending clustering request to Ollama (Simulating instant failure)")
-        raise OllamaServiceError("Fast fail for heuristics")
+        self._logger.info(f"Sending clustering request to Ollama ({self._model})...")
+        response = self._client.chat(
+            model=self._model,
+            messages=[{"role": "user", "content": prompt}],
+            format="json"
+        )
+
 
         content = self._extract_message_content(response)
         if not isinstance(content, str) or not content.strip():
