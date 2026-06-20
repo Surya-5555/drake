@@ -225,10 +225,19 @@ def init_db_sync() -> None:
                 required_params TEXT NOT NULL,
                 request_schema TEXT,
                 response_schema TEXT,
+                variable_bindings TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
             )
             """)
+
+        try:
+            cursor = conn.execute("PRAGMA table_info(endpoint_steps)")
+            columns = [row["name"] for row in cursor.fetchall()]
+            if columns and "variable_bindings" not in columns:
+                conn.execute("ALTER TABLE endpoint_steps ADD COLUMN variable_bindings TEXT")
+        except Exception:
+            pass
 
         # 6. Capability registry
         conn.execute("""
@@ -603,8 +612,8 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
             for i, ep in enumerate(sorted_eps):
                 conn.execute(
                     """
-                    INSERT INTO endpoint_steps (workflow_id, step_order, operation_id, method, url, required_params, request_schema, response_schema, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO endpoint_steps (workflow_id, step_order, operation_id, method, url, required_params, request_schema, response_schema, variable_bindings, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         wf_id,
@@ -615,6 +624,7 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
                         ep["required_params"],
                         ep.get("request_schema"),
                         ep.get("response_schema"),
+                        ep.get("variable_bindings"),
                         datetime.now(timezone.utc).isoformat(),
                     ),
                 )
@@ -649,6 +659,7 @@ def get_workflows(
                     "method": step["method"],
                     "url": step["url"],
                     "path": step["url"],
+                    "variableBindings": json.loads(step["variable_bindings"]) if step.get("variable_bindings") else {}
                 }
             )
 
@@ -671,6 +682,7 @@ def get_workflows(
                         "method": ep["method"],
                         "url": ep["url"],
                         "path": ep["url"],
+                        "variableBindings": {}
                     }
                     for ep in endpoints
                     if ep["operation_id"] == wf_id
@@ -770,6 +782,7 @@ class EndpointStep(Base):
     required_params = Column(String, nullable=False)
     request_schema = Column(String)
     response_schema = Column(String)
+    variable_bindings = Column(String)
     created_at = Column(String, nullable=False)
 
     workflow = relationship("Workflow", back_populates="steps")
@@ -954,6 +967,7 @@ async def sync_governance_to_mcp_proxy() -> None:
                     method=ep["method"],
                     url=ep["url"],
                     required_params=ep.get("required_params", "[]"),
+                    variable_bindings=ep.get("variable_bindings"),
                     created_at=datetime.now(timezone.utc).isoformat(),
                 )
                 wf.steps.append(step)

@@ -1,6 +1,7 @@
 import logging
 import re
 from typing import Any, Dict, Optional
+import json
 import httpx
 from urllib.parse import urljoin, quote
 from tenacity import (
@@ -155,9 +156,15 @@ class HTTPXExecutorBase(BaseExecutor):
         
         step_results = []
         for idx, step in enumerate(steps):
-            step_name = f"step{idx+1}"
+            step_name = step.operation_id
+            
+            # Variable Mapping Engine: Merge dynamically mapped inputs
+            step_bindings = json.loads(step.variable_bindings) if step.variable_bindings else {}
+            merged_params = params.copy()
+            merged_params.update(step_bindings)
+
             try:
-                res = await self.execute_step(step, params, context)
+                res = await self.execute_step(step, merged_params, context)
                 step_results.append(res)
                 # Store output in context for future steps
                 context[step_name] = res["data"]
