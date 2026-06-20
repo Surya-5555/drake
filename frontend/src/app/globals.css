@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "reactflow/dist/style.css";
 
 :root {
   --background: 248 250 252;
