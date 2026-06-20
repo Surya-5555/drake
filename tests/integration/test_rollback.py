@@ -291,3 +291,62 @@ async def test_revert_previous_action_none():
     # Call revert
     message = await revert_previous_action("192.168.1.222")
     assert "Action cannot be reverted. Previous execution was flagged as an irreversible destructive action." in message
+
+
+@pytest.mark.anyio
+@patch("src.proxy.executors.workflow_execution_service.httpx.AsyncClient")
+async def test_auto_rollback_on_execution_failure(mock_httpx_client):
+    """Verify that WorkflowExecutionService triggers auto-rollback when execution fails."""
+    await init_db()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_client_instance = AsyncMock()
+    mock_client_instance.post.return_value = mock_response
+    mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+
+    # Mock inner executor to raise exception
+    mock_executor = MagicMock()
+    mock_executor.execute_workflow = AsyncMock(side_effect=ValueError("Execution failure"))
+
+    async with async_session() as session:
+        # Insert a workflow configured with SCP_SNAPSHOT
+        wf = Workflow(
+            id="wf_auto_rollback_test",
+            system_name="auto_rollback_workflow",
+            display_name="Auto Rollback Workflow",
+            risk_level="high",
+            cluster_size=1,
+            confidence=0.9,
+            generated_description="test",
+            supports_rollback=True,
+            rollback_strategy="SCP_SNAPSHOT",
+        )
+        session.add(wf)
+        await session.commit()
+
+    service = WorkflowExecutionService(mock_executor)
+    
+    # Execute workflow via the service and expect ValueError
+    params = {"param1": "val1"}
+    with pytest.raises(ValueError, match="Execution failure"):
+        await service.execute_workflow("auto_rollback_workflow", "192.168.1.180", params)
+
+    # Verify that HTTP POST request for auto-rollback was made to ImportSystemConfiguration
+    calls = mock_client_instance.post.call_args_list
+    assert len(calls) >= 2  # 1st is export configuration snapshot, 2nd is import configuration snapshot
+    assert any("ImportSystemConfiguration" in call[0][0] for call in calls)
+    
+    # Check that ledger entry status was set to "rolled_back"
+    async with async_session() as session:
+        from sqlalchemy.future import select
+        db_result = await session.execute(
+            select(ExecutionHistory)
+            .where(ExecutionHistory.target_server_ip == "192.168.1.180")
+            .order_by(ExecutionHistory.timestamp.desc())
+        )
+        history = db_result.scalars().first()
+        assert history is not None
+        assert history.status == "rolled_back"
+        assert history.snapshot_path is not None
+
