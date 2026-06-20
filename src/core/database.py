@@ -14,6 +14,7 @@ Includes a modern async SQLAlchemy layer for runtime proxy management.
 from __future__ import annotations
 
 import json
+from src.governance.middleware import GovernanceMiddleware
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -144,11 +145,30 @@ def init_db_sync() -> None:
         try:
             cursor = conn.execute("PRAGMA table_info(workflows)")
             columns = [row["name"] for row in cursor.fetchall()]
-            if columns and "system_name" not in columns:
-                conn.execute("ALTER TABLE workflows ADD COLUMN system_name TEXT DEFAULT 'legacy'")
-                conn.execute("ALTER TABLE workflows ADD COLUMN display_name TEXT DEFAULT 'legacy'")
-                if "workflow_name" in columns:
-                    conn.execute("UPDATE workflows SET display_name = workflow_name, system_name = workflow_name")
+            if columns:
+                if "system_name" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN system_name TEXT DEFAULT 'legacy'")
+                    conn.execute("ALTER TABLE workflows ADD COLUMN display_name TEXT DEFAULT 'legacy'")
+                    if "workflow_name" in columns:
+                        conn.execute("UPDATE workflows SET display_name = workflow_name, system_name = workflow_name")
+                if "workflow_version" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN workflow_version INTEGER DEFAULT 1")
+                if "approved_by" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN approved_by TEXT")
+                if "approved_at" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN approved_at TEXT")
+                if "risk_score" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN risk_score REAL DEFAULT 0.0")
+                if "governance_score" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN governance_score REAL DEFAULT 0.0")
+                if "policy_version" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN policy_version TEXT")
+                if "execution_count" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN execution_count INTEGER DEFAULT 0")
+                if "last_execution_status" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN last_execution_status TEXT")
+                if "rollback_version" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN rollback_version INTEGER")
         except Exception:
             pass
 
@@ -170,9 +190,23 @@ def init_db_sync() -> None:
                 workflow_name TEXT,
                 description TEXT NOT NULL,
                 actor TEXT NOT NULL,
-                timestamp TEXT NOT NULL
+                timestamp TEXT NOT NULL,
+                metadata TEXT
             )
             """)
+
+        try:
+            cursor = conn.execute("PRAGMA table_info(audit_events)")
+            columns = [row["name"] for row in cursor.fetchall()]
+            if columns:
+                if "metadata" not in columns:
+                    conn.execute("ALTER TABLE audit_events ADD COLUMN metadata TEXT")
+                if "previous_hash" not in columns:
+                    conn.execute("ALTER TABLE audit_events ADD COLUMN previous_hash TEXT")
+                if "hash" not in columns:
+                    conn.execute("ALTER TABLE audit_events ADD COLUMN hash TEXT")
+        except Exception:
+            pass
 
         # 5. Endpoint steps
         conn.execute("""
@@ -228,17 +262,28 @@ def log_audit_event(
     description: str,
     workflow_name: Optional[str] = None,
     actor: str = "system",
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Create a new audit trail event in the database."""
+    """Create a new audit trail event in the database with a tamper-evident hash chain."""
+    import hashlib
     event_id = (
         f"evt_{datetime.now(timezone.utc).timestamp()}_{hash(description) & 0xffff}"
     )
     timestamp = datetime.now(timezone.utc).isoformat()
+    meta_json = json.dumps(metadata) if metadata else None
+
     with get_db_connection() as conn:
+        cursor = conn.execute("SELECT hash FROM audit_events ORDER BY rowid DESC LIMIT 1")
+        row = cursor.fetchone()
+        previous_hash = row["hash"] if row and row["hash"] else "GENESIS_HASH"
+        
+        payload_str = f"{event_id}{event_type}{status}{workflow_name}{description}{actor}{timestamp}{meta_json}{previous_hash}"
+        new_hash = hashlib.sha256(payload_str.encode('utf-8')).hexdigest()
+
         conn.execute(
             """
-            INSERT INTO audit_events (id, event_type, status, workflow_name, description, actor, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO audit_events (id, event_type, status, workflow_name, description, actor, timestamp, metadata, previous_hash, hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 event_id,
@@ -248,6 +293,9 @@ def log_audit_event(
                 description,
                 actor,
                 timestamp,
+                meta_json,
+                previous_hash,
+                new_hash,
             ),
         )
         conn.commit()
@@ -327,17 +375,40 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
         )
         existing = {row["id"]: dict(row) for row in cursor.fetchall()}
 
+        # Apply Governance Layer Interception
+        # Fetch all current endpoints to pass into the middleware
+        cursor = conn.execute("SELECT * FROM endpoints")
+        all_endpoints = [dict(row) for row in cursor.fetchall()]
+        
+        # Intercept and enrich workflows with policy status
+        try:
+            workflows_list = GovernanceMiddleware.get_instance().process_new_workflows(workflows_list, all_endpoints)
+        except Exception as e:
+            print(f"Governance interception failed: {e}")
+
         conn.execute("DELETE FROM workflows")
         conn.execute("DELETE FROM endpoint_steps")
         for wf in workflows_list:
             wf_id = wf["id"]
-            approved = 0
-            rejection_reason = None
+            approved = wf.get("approved", 0)
+            rejection_reason = wf.get("rejection_reason")
             system_name = wf.get("system_name") or wf.get("workflow_name") or "unknown_workflow"
             display_name = wf.get("display_name") or wf.get("workflow_name") or system_name
             wf_desc = wf.get("generated_description") or f"Operations workflow for {display_name}"
+            
+            risk_score = wf.get("risk_score", 0.0)
+            gov_score = wf.get("governance_score", 0.0)
+            policy_version = wf.get("policy_version", "1.0")
+            workflow_version = 1
+            approved_by = None
+            approved_at = None
+            execution_count = 0
+            last_execution_status = None
+            rollback_version = None
 
             if wf_id in existing:
+                # Retain existing manual status if it was previously set
+                # unless governance wants to strictly overwrite it (we default to keeping user approvals)
                 approved = existing[wf_id]["approved"]
                 rejection_reason = existing[wf_id]["rejection_reason"]
                 
@@ -349,11 +420,24 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
                     display_name = existing[wf_id]["display_name"]
                 if existing[wf_id]["generated_description"] != wf_desc:
                     wf_desc = existing[wf_id]["generated_description"]
+                    
+                # Increment version on generation changes? For hackathon MVP we just bump version
+                workflow_version = existing[wf_id].get("workflow_version", 0) + 1
+                approved_by = existing[wf_id].get("approved_by")
+                approved_at = existing[wf_id].get("approved_at")
+                execution_count = existing[wf_id].get("execution_count", 0)
+                last_execution_status = existing[wf_id].get("last_execution_status")
+                rollback_version = existing[wf_id].get("rollback_version")
 
             conn.execute(
                 """
-                INSERT INTO workflows (id, system_name, display_name, risk_level, cluster_size, confidence, generated_description, approved, rejection_reason, community_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO workflows (
+                    id, system_name, display_name, risk_level, cluster_size, confidence, 
+                    generated_description, approved, rejection_reason, community_id,
+                    workflow_version, approved_by, approved_at, risk_score, governance_score,
+                    policy_version, execution_count, last_execution_status, rollback_version
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     wf_id,
@@ -366,6 +450,15 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
                     approved,
                     rejection_reason,
                     wf.get("community_id", wf_id),
+                    workflow_version,
+                    approved_by,
+                    approved_at,
+                    risk_score,
+                    gov_score,
+                    policy_version,
+                    execution_count,
+                    last_execution_status,
+                    rollback_version
                 ),
             )
 
@@ -503,6 +596,17 @@ class Workflow(Base):
     approved = Column(Integer, default=0)
     rejection_reason = Column(String)
     community_id = Column(String)
+    
+    # New hackathon enterprise additions
+    workflow_version = Column(Integer, default=1)
+    approved_by = Column(String)
+    approved_at = Column(String)
+    risk_score = Column(Float, default=0.0)
+    governance_score = Column(Float, default=0.0)
+    policy_version = Column(String)
+    execution_count = Column(Integer, default=0)
+    last_execution_status = Column(String)
+    rollback_version = Column(Integer)
 
     steps = relationship(
         "EndpointStep",

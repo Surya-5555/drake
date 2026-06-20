@@ -74,7 +74,47 @@ async def execute_workflow_route(
         mock_server_url = os.getenv("MOCK_SERVER_URL", "http://localhost:8000")
         executor = MockExecutor(base_url=mock_server_url)
 
-    return await executor.execute_workflow(workflow_name, params)
+    from src.governance.middleware import GovernanceMiddleware
+    from src.core.database import log_audit_event, async_session, Workflow
+    from sqlalchemy import update
+
+    try:
+        masked_params = GovernanceMiddleware.get_instance().intercept_execution(workflow_name, params)
+        log_audit_event("EXECUTION_START", "SUCCESS", f"Started {workflow_name}", workflow_name=workflow_name, metadata={"inputs": masked_params})
+        
+        result = await executor.execute_workflow(workflow_name, params)
+        
+        log_audit_event("EXECUTION_COMPLETE", "SUCCESS", f"Completed {workflow_name}", workflow_name=workflow_name)
+        
+        # Update execution metrics
+        async with async_session() as session:
+            await session.execute(
+                update(Workflow)
+                .where(Workflow.system_name == workflow_name)
+                .values(
+                    execution_count=Workflow.execution_count + 1,
+                    last_execution_status="SUCCESS"
+                )
+            )
+            await session.commit()
+            
+        return result
+    except Exception as e:
+        log_audit_event("EXECUTION_FAILED", "FAILED", str(e), workflow_name=workflow_name)
+        
+        # Update execution metrics for failure
+        async with async_session() as session:
+            await session.execute(
+                update(Workflow)
+                .where(Workflow.system_name == workflow_name)
+                .values(
+                    execution_count=Workflow.execution_count + 1,
+                    last_execution_status="FAILED"
+                )
+            )
+            await session.commit()
+            
+        raise
 
 
 def extract_placeholders_from_steps(steps) -> Set[str]:
