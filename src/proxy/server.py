@@ -147,13 +147,17 @@ async def load_approved_tools_from_db() -> None:
                 try:
                     req_params = json.loads(step.required_params) if step.required_params else []
                     for p in req_params:
-                        p_name = p.get("name")
-                        if p_name and p_name != "body":
-                            # Map primitive types
-                            p_type = str
-                            if p.get("param_type") == "integer": p_type = int
-                            elif p.get("param_type") == "boolean": p_type = bool
-                            all_params[p_name] = (p_type, ... if p.get("required", True) else None)
+                        if isinstance(p, str):
+                            if p != "body":
+                                all_params[p] = (str, ...)
+                        else:
+                            p_name = p.get("name")
+                            if p_name and p_name != "body":
+                                # Map primitive types
+                                p_type = str
+                                if p.get("param_type") == "integer": p_type = int
+                                elif p.get("param_type") == "boolean": p_type = bool
+                                all_params[p_name] = (p_type, ... if p.get("required", True) else None)
                 except Exception:
                     pass
 

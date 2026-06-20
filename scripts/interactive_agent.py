@@ -3,6 +3,7 @@ import json
 import traceback
 import sys
 import os
+import difflib
 
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List
@@ -19,9 +20,41 @@ except ImportError:
     print("Please install openai and instructor: pip install openai instructor")
     sys.exit(1)
 
-# Configure the OpenAI client to point to the local Ollama instance
+# Configure from environment (no hardcoding)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_HOST", "http://localhost:11434") + "/v1"
-MODEL_NAME = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:14b") # Updated to use your preferred Qwen coder model
+MODEL_NAME = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:14b")
+MCP_PROXY_URL = os.getenv("MCP_PROXY_URL", "http://localhost:8000/mcp/sse")
+
+
+def validate_arguments(tool_name: str, arguments: Dict[str, Any], tools: List[dict]) -> tuple[bool, str]:
+    """Validate that LLM-selected arguments match the tool's actual schema."""
+    tool = next((t for t in tools if t["name"] == tool_name), None)
+    if not tool:
+        return False, f"Tool '{tool_name}' not found in registry"
+    
+    schema = tool.get("inputSchema", {})
+    valid_props = set(schema.get("properties", {}).keys())
+    required_props = set(schema.get("required", []))
+    given_props = set(arguments.keys())
+    
+    # Check for unexpected arguments
+    unexpected = given_props - valid_props
+    if unexpected:
+        return False, (
+            f"Invalid arguments {unexpected} for tool '{tool_name}'.\n"
+            f"  Valid arguments are: {valid_props or '(none - pass empty dict)'}\n"
+            f"  Required arguments: {required_props or '(none)'}"
+        )
+    
+    # Check for missing required arguments
+    missing = required_props - given_props
+    if missing:
+        return False, (
+            f"Missing required arguments {missing} for tool '{tool_name}'.\n"
+            f"  Required: {required_props}"
+        )
+    
+    return True, "OK"
 
 class ToolSelection(BaseModel):
     selected_tool_name: str = Field(..., description="The exact name of the tool to execute, or 'NONE' if no tool is needed")
@@ -34,15 +67,22 @@ async def decide_tool_with_llm(client: instructor.AsyncInstructor, prompt: str, 
     
     # Format tools for the LLM prompt
     tools_context = []
+    tool_names_list = []
     for t in tools:
+        tool_names_list.append(t['name'])
         tools_context.append(f"- Tool Name: {t['name']}\n  Description: {t['description']}\n  Schema: {json.dumps(t['inputSchema'])}")
     
     system_prompt = (
         "You are an advanced AI Server Administrator Agent for Dell infrastructure.\n"
         "You have access to the following dynamic server management tools via the Model Context Protocol (MCP):\n"
         f"{chr(10).join(tools_context)}\n\n"
-        "Your job is to read the user prompt and decide WHICH tool to use and WHAT arguments to pass it.\n"
-        "If a tool isn't needed, return 'NONE' for selected_tool_name and respond conversationally in agent_response.\n"
+        "Your job is to read the user prompt and decide WHICH tool to use and WHAT arguments to pass it.\n\n"
+        "RULES YOU MUST FOLLOW:\n"
+        f"1. The selected_tool_name MUST BE EXACTLY ONE OF THESE: {', '.join(tool_names_list)}. Do not invent or guess tool names.\n"
+        "2. ARGUMENTS MUST ONLY contain keys that exist in the selected tool's 'Schema'. Do NOT pass arguments that are not in the schema.\n"
+        "3. Before returning, VERIFY: check the selected tool's Schema 'properties' — every key in your arguments dict must be a valid property in that schema. If the schema has no properties or is empty, pass an empty dict {}.\n"
+        "4. Match the tool by its DESCRIPTION — pick the tool whose description best matches the user's intent.\n"
+        "5. If a tool isn't needed, return 'NONE' for selected_tool_name and respond conversationally in agent_response.\n"
         "Always be concise and clear."
     )
     
@@ -73,14 +113,14 @@ async def interactive_loop():
         mode=instructor.Mode.JSON
     )
 
-    print("[SYSTEM] Connecting to FastMCP Proxy Server to discover live tools...")
+    print(f"[SYSTEM] Connecting to FastMCP Proxy Server ({MCP_PROXY_URL})...")
     try:
-        async with sse_client("http://localhost:8000/mcp/sse") as (read_stream, write_stream):
+        async with sse_client(MCP_PROXY_URL) as (read_stream, write_stream):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
                 print("  -> Connected to MCP proxy successfully.")
 
-                # List tools available via MCP
+                # List tools available via MCP (these are ONLY approved workflows)
                 tools_response = await session.list_tools()
                 available_tools = []
                 for t in tools_response.tools:
@@ -89,7 +129,14 @@ async def interactive_loop():
                         "description": t.description or "No description",
                         "inputSchema": t.inputSchema
                     })
-                print(f"  -> Discovered {len(available_tools)} live server tools in the registry.\n")
+                
+                # Display approved tool summary
+                print(f"  -> Discovered {len(available_tools)} approved workflow tools:\n")
+                for i, t in enumerate(available_tools, 1):
+                    params = list(t["inputSchema"].get("properties", {}).keys())
+                    params_str = ', '.join(params) if params else '(no params)'
+                    print(f"     {i:3d}. {t['name']:<50s} [{params_str}]")
+                print()
 
                 while True:
                     user_prompt = input("\n[USER]> ")
@@ -108,22 +155,39 @@ async def interactive_loop():
                         print(f"  [Agent Internal Reasoning]: {selection.reasoning}")
 
                         if selection.selected_tool_name and selection.selected_tool_name.upper() != "NONE":
-                            print(f"\n[SYSTEM] Agent executing tool '{selection.selected_tool_name}' via MCP...")
-                            print(f"  - Parameters passed: {selection.arguments}")
+                            print(f"\n[SYSTEM] Agent selected tool '{selection.selected_tool_name}'")
+                            print(f"  - Parameters: {json.dumps(selection.arguments, indent=2)}")
                             
-                            # Validate the tool actually exists
                             tool_names = [t["name"] for t in available_tools]
+                            
+                            # Fuzzy matching to fix LLM typo/hallucinations
                             if selection.selected_tool_name not in tool_names:
-                                print(f"  [ERROR] Agent selected a non-existent tool: {selection.selected_tool_name}")
+                                close_matches = difflib.get_close_matches(selection.selected_tool_name, tool_names, n=1, cutoff=0.8)
+                                if close_matches:
+                                    print(f"  [SYSTEM] Auto-correcting tool name: '{selection.selected_tool_name}' -> '{close_matches[0]}'")
+                                    selection.selected_tool_name = close_matches[0]
+                                else:
+                                    print(f"  [ERROR] Tool '{selection.selected_tool_name}' does not exist. Available tools:")
+                                    for tn in tool_names:
+                                        print(f"    - {tn}")
+                                    continue
+
+                            # Pre-execution schema validation
+                            valid, msg = validate_arguments(selection.selected_tool_name, selection.arguments, available_tools)
+                            if not valid:
+                                print(f"\n  [VALIDATION FAILED] {msg}")
+                                print(f"  [SYSTEM] Skipping execution — LLM passed invalid arguments.")
                                 continue
 
                             # Execute the chosen tool via MCP
+                            print(f"\n[SYSTEM] Executing '{selection.selected_tool_name}' via MCP...")
                             result = await session.call_tool(
                                 selection.selected_tool_name, 
                                 arguments=selection.arguments
                             )
                             
                             print("\n[SYSTEM] Tool Execution Complete. Result payload:")
+                            print("---------------------------------------------------------------------")
                             for content in result.content:
                                 if content.type == "text":
                                     try:
@@ -131,6 +195,9 @@ async def interactive_loop():
                                         print(json.dumps(parsed_text, indent=2))
                                     except Exception:
                                         print(content.text)
+                                else:
+                                    print(f"  [{content.type}]: {content}")
+                            print("---------------------------------------------------------------------")
                         else:
                             print("\n[SYSTEM] Agent did not invoke any tools for this prompt.")
                     
