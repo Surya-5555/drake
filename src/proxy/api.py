@@ -615,9 +615,26 @@ async def prometheus_metrics():
 
         total_workflows = pending + approved + rejected
 
+        total_checks = 0
+        total_blocks = 0
+        total_warnings = 0
+        total_successes = 0
+
         if total_workflows == 0:
             token_savings = 0.0
             coverage = 0.0
+            try:
+                async with aiosqlite.connect(DB_FILE) as db:
+                    async with db.execute("SELECT COUNT(*) FROM compatibility_reports") as c:
+                        total_checks = (await c.fetchone())[0]
+                    async with db.execute("SELECT COUNT(*) FROM compatibility_reports WHERE status='BLOCK'") as c:
+                        total_blocks = (await c.fetchone())[0]
+                    async with db.execute("SELECT COUNT(*) FROM compatibility_reports WHERE status='WARN'") as c:
+                        total_warnings = (await c.fetchone())[0]
+                    async with db.execute("SELECT COUNT(*) FROM compatibility_reports WHERE status='ALLOW'") as c:
+                        total_successes = (await c.fetchone())[0]
+            except Exception:
+                pass
         else:
             # Calculate actual tokens using length heuristic
             async with aiosqlite.connect(DB_FILE) as db:
@@ -637,6 +654,16 @@ async def prometheus_metrics():
                 async with db.execute("SELECT COUNT(*) FROM endpoints WHERE community_id IS NOT NULL") as c:
                     row = await c.fetchone()
                     clustered_endpoints = row[0] if row else 0
+                
+                # Fetch compatibility metrics
+                async with db.execute("SELECT COUNT(*) FROM compatibility_reports") as c:
+                    total_checks = (await c.fetchone())[0]
+                async with db.execute("SELECT COUNT(*) FROM compatibility_reports WHERE status='BLOCK'") as c:
+                    total_blocks = (await c.fetchone())[0]
+                async with db.execute("SELECT COUNT(*) FROM compatibility_reports WHERE status='WARN'") as c:
+                    total_warnings = (await c.fetchone())[0]
+                async with db.execute("SELECT COUNT(*) FROM compatibility_reports WHERE status='ALLOW'") as c:
+                    total_successes = (await c.fetchone())[0]
             coverage = (clustered_endpoints / endpoint_count) * 100 if endpoint_count > 0 else 0.0
 
         lines = [
@@ -660,8 +687,33 @@ async def prometheus_metrics():
             f"dell_mcp_token_savings_percent {token_savings:.2f}",
             "# HELP dell_mcp_clustering_coverage_percent Percentage of endpoints successfully clustered.",
             "# TYPE dell_mcp_clustering_coverage_percent gauge",
-            f"dell_mcp_clustering_coverage_percent {coverage:.2f}"
+            f"dell_mcp_clustering_coverage_percent {coverage:.2f}",
+            "# HELP dell_mcp_compatibility_checks_total Total validation checks executed.",
+            "# TYPE dell_mcp_compatibility_checks_total counter",
+            f"dell_mcp_compatibility_checks_total {total_checks}",
+            "# HELP dell_mcp_compatibility_blocks_total Total validation executions blocked.",
+            "# TYPE dell_mcp_compatibility_blocks_total counter",
+            f"dell_mcp_compatibility_blocks_total {total_blocks}",
+            "# HELP dell_mcp_compatibility_warnings_total Total validation warnings raised.",
+            "# TYPE dell_mcp_compatibility_warnings_total counter",
+            f"dell_mcp_compatibility_warnings_total {total_warnings}",
+            "# HELP dell_mcp_compatibility_successes_total Total validation checks successfully allowed.",
+            "# TYPE dell_mcp_compatibility_successes_total counter",
+            f"dell_mcp_compatibility_successes_total {total_successes}"
         ]
+
+        # Fetch cache metrics
+        from src.core.compatibility.sources import get_cache_metrics
+        hits, misses = get_cache_metrics()
+        lines.extend([
+            "# HELP dell_mcp_facts_cache_hits_total Total facts cache hits.",
+            "# TYPE dell_mcp_facts_cache_hits_total counter",
+            f"dell_mcp_facts_cache_hits_total {hits}",
+            "# HELP dell_mcp_facts_cache_misses_total Total facts cache misses.",
+            "# TYPE dell_mcp_facts_cache_misses_total counter",
+            f"dell_mcp_facts_cache_misses_total {misses}"
+        ])
+
         return PlainTextResponse("\n".join(lines) + "\n")
     except Exception as err:
         logger.error(f"Prometheus metrics generation failed: {err}")
@@ -690,27 +742,8 @@ async def export_workflow_ansible(workflow_id: str):
             ) as c:
                 steps = await c.fetchall()
 
-        tasks = []
-        for idx, step in enumerate(steps):
-            task_data = {
-                "name": f"Step {idx + 1} - {step['method'].upper()} {step['url']}",
-                "ansible.builtin.uri": {
-                    "url": f"https://{{{{ idrac_ip }}}}{step['url']}",
-                    "method": step["method"].upper(),
-                    "user": "{{ idrac_user }}",
-                    "password": "{{ idrac_password }}",
-                    "force_basic_auth": True,
-                    "validate_certs": False,
-                    "status_code": [200, 201, 202, 204],
-                }
-            }
-            if step["method"].upper() in ["POST", "PATCH", "PUT"]:
-                task_data["ansible.builtin.uri"]["body_format"] = "json"
-                task_data["ansible.builtin.uri"]["body"] = {
-                    "Target": "Example"
-                }
-            task_data["register"] = f"step_{idx + 1}_result"
-            tasks.append(task_data)
+        from src.core.compatibility.ansible_enricher import AnsiblePlaybookEnricher
+        tasks = AnsiblePlaybookEnricher.enrich_playbook_tasks(steps)
 
         playbook = [
             {
@@ -787,3 +820,201 @@ async def sync_workflow_mappings_async() -> None:
         )
     except Exception as err:
         logger.error(f"Syncing workflow mappings failed: {err}")
+
+
+@app.get("/api/v1/workflows/{workflow_id}/compatibility")
+async def get_workflow_compatibility(workflow_id: str, target_ip: Optional[str] = None):
+    try:
+        # 1. Fetch workflow and steps from database
+        async with aiosqlite.connect(DB_FILE) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("SELECT * FROM workflows WHERE id = ?", (workflow_id,)) as c:
+                wf = await c.fetchone()
+            if not wf:
+                raise HTTPException(status_code=404, detail="Workflow not found")
+            
+            async with db.execute("SELECT * FROM endpoint_steps WHERE workflow_id = ? ORDER BY step_order", (workflow_id,)) as c:
+                steps_rows = await c.fetchall()
+        
+        # Convert steps to matching format
+        from pydantic import BaseModel
+        class TempStep(BaseModel):
+            operation_id: str
+            method: str
+            url: str
+        
+        steps = [
+            TempStep(operation_id=r["operation_id"], method=r["method"], url=r["url"])
+            for r in steps_rows
+        ]
+        
+        # 2. Get target facts (from cache or static provider)
+        ip = target_ip or "192.168.0.120"
+        from src.core.compatibility.sources import CachedFactsProvider, StaticFactsProvider
+        try:
+            facts = await CachedFactsProvider().get_device_facts(ip)
+        except Exception:
+            facts = await StaticFactsProvider().get_device_facts(ip)
+            
+        # 3. Validate
+        from src.core.compatibility.repository import CompatibilityRepository
+        from src.core.compatibility.engine import CompatibilityEngine
+        repo = CompatibilityRepository()
+        engine = CompatibilityEngine(repo)
+        report = await engine.validate_workflow(workflow_id, steps, facts)
+        
+        # Build dependency DAG visualization string
+        dag = await engine.dag_engine.build_dependencies_dag()
+        mermaid_diagram = engine.dag_engine.generate_mermaid_diagram(dag)
+        
+        return {
+            "workflowId": workflow_id,
+            "displayName": wf["display_name"],
+            "status": report.status.value,
+            "compatibilityScore": report.compatibility_score,
+            "riskScore": report.risk_score,
+            "blastRadius": report.blast_radius,
+            "confidenceScore": report.confidence_score,
+            "findings": [f.model_dump() for f in report.findings],
+            "violations": [v.model_dump() for v in report.violations],
+            "dependencyMermaid": mermaid_diagram,
+            "timestamp": report.timestamp.isoformat()
+        }
+    except Exception as err:
+        logger.error(f"Failed to calculate workflow compatibility: {err}")
+        raise HTTPException(status_code=500, detail=str(err))
+
+
+@app.get("/api/v1/compatibility/rules")
+async def get_compatibility_rules():
+    try:
+        from src.core.compatibility.repository import CompatibilityRepository
+        repo = CompatibilityRepository()
+        rules = await repo.get_active_rules()
+        return rules
+    except Exception as err:
+        logger.error(f"Failed to fetch rules: {err}")
+        raise HTTPException(status_code=500, detail=str(err))
+
+
+class CreateRulePayload(BaseModel):
+    id: str
+    rule_name: str
+    rule_type: str
+    domain: str
+    risk_score: int
+    rule_config: str
+    created_by: str = "admin"
+    change_reason: str = "Created via API"
+
+
+@app.post("/api/v1/compatibility/rules", dependencies=[Depends(get_api_key)])
+async def create_compatibility_rule(payload: CreateRulePayload):
+    try:
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute(
+                """
+                INSERT INTO compatibility_rules (id, rule_name, rule_type, domain, rule_version, effective_from, created_by, change_reason, rule_config)
+                VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
+                """,
+                (
+                    payload.id,
+                    payload.rule_name,
+                    payload.rule_type,
+                    payload.domain,
+                    datetime.now(timezone.utc).isoformat(),
+                    payload.created_by,
+                    payload.change_reason,
+                    payload.rule_config
+                )
+            )
+            await db.commit()
+        return {"status": "created", "rule_id": payload.id}
+    except Exception as err:
+        logger.error(f"Failed to create rule: {err}")
+        raise HTTPException(status_code=500, detail=str(err))
+
+
+@app.get("/api/v1/workflows/{workflow_id}/explainability")
+async def get_workflow_explainability(workflow_id: str, target_ip: Optional[str] = None):
+    try:
+        # 1. Fetch workflow and steps from database
+        async with aiosqlite.connect(DB_FILE) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("SELECT * FROM workflows WHERE id = ?", (workflow_id,)) as c:
+                wf = await c.fetchone()
+            if not wf:
+                raise HTTPException(status_code=404, detail="Workflow not found")
+            
+            async with db.execute("SELECT * FROM endpoint_steps WHERE workflow_id = ? ORDER BY step_order", (workflow_id,)) as c:
+                steps_rows = await c.fetchall()
+        
+        # Convert steps to TempStep
+        from pydantic import BaseModel
+        class TempStep(BaseModel):
+            operation_id: str
+            method: str
+            url: str
+        
+        steps = [
+            TempStep(operation_id=r["operation_id"], method=r["method"], url=r["url"])
+            for r in steps_rows
+        ]
+        
+        # 2. Get target facts (from cache or static provider)
+        ip = target_ip or "192.168.0.120"
+        from src.core.compatibility.sources import CachedFactsProvider, StaticFactsProvider
+        try:
+            facts = await CachedFactsProvider().get_device_facts(ip)
+        except Exception:
+            facts = await StaticFactsProvider().get_device_facts(ip)
+            
+        # 3. Validate
+        from src.core.compatibility.repository import CompatibilityRepository
+        from src.core.compatibility.engine import CompatibilityEngine
+        repo = CompatibilityRepository()
+        engine = CompatibilityEngine(repo)
+        report = await engine.validate_workflow(workflow_id, steps, facts)
+        
+        # Build dependency DAG visualization string
+        dag = await engine.dag_engine.build_dependencies_dag()
+        mermaid_diagram = engine.dag_engine.generate_mermaid_diagram(dag)
+        
+        # Build risk heatmap data (Risk vs Blast Radius)
+        risk_heatmap = {
+            "matrix": {
+                "READ_ONLY": {"NODE": 10, "CHASSIS": 20, "RACK": 30, "CLUSTER": 40},
+                "CONFIG_CHANGE": {"NODE": 50, "CHASSIS": 60, "RACK": 70, "CLUSTER": 80},
+                "DESTRUCTIVE": {"NODE": 90, "CHASSIS": 95, "RACK": 98, "CLUSTER": 100}
+            },
+            "current_position": {
+                "risk": report.risk_score,
+                "blast_radius": report.blast_radius
+            }
+        }
+        
+        # Extrapolate unsupported models and remediation
+        unsupported = []
+        remediation = []
+        for v in report.violations:
+            if v.field_checked == "device_model":
+                unsupported.append(v.actual_value)
+            if v.remediation_step:
+                remediation.append(v.remediation_step)
+                
+        from src.core.compatibility.models import GovernanceExplainabilityReport
+        return GovernanceExplainabilityReport(
+            workflow_id=workflow_id,
+            workflow_display_name=wf["display_name"],
+            compatibility_score=report.compatibility_score,
+            overall_risk_level="DESTRUCTIVE" if report.risk_score >= 80 else ("CONFIG_CHANGE" if report.risk_score >= 40 else "READ_ONLY"),
+            confidence_level=report.confidence_score,
+            blast_radius=report.blast_radius,
+            unsupported_models=unsupported,
+            remediation_actions=remediation,
+            risk_heatmap_data=risk_heatmap,
+            dependency_graph_mermaid=mermaid_diagram
+        )
+    except Exception as err:
+        logger.error(f"Failed to fetch explainability report: {err}")
+        raise HTTPException(status_code=500, detail=str(err))

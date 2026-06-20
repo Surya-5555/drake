@@ -58,23 +58,11 @@ async def execute_workflow_route(
 ) -> Dict[str, Any]:
     """
     Routes execution to the designated executor selected by env configuration.
+    Integrates pre-flight validation rules under the orchestrator WorkflowExecutionManager.
     """
-    from src.proxy.executors.httpx_executor import PrismExecutor, MockExecutor
-    from src.proxy.executors.dell_omsdk_executor import DellOMSDKExecutor
-
-    executor_type = os.getenv("DELL_EXECUTOR_TYPE", "prism").lower()
-    executor: BaseExecutor
-
-    if executor_type == "omsdk":
-        executor = DellOMSDKExecutor()
-    elif executor_type == "prism":
-        prism_url = os.getenv("PRISM_URL", "http://localhost:4010")
-        executor = PrismExecutor(base_url=prism_url)
-    else:
-        mock_server_url = os.getenv("MOCK_SERVER_URL", "http://localhost:8000")
-        executor = MockExecutor(base_url=mock_server_url)
-
-    return await executor.execute_workflow(workflow_name, params)
+    from src.core.compatibility.orchestrator import WorkflowExecutionManager
+    manager = WorkflowExecutionManager()
+    return await manager.execute_workflow_with_validation(workflow_name, params)
 
 
 def extract_placeholders_from_steps(steps) -> Set[str]:
@@ -186,7 +174,7 @@ async def get_proxy_status() -> Dict[str, Any]:
     wf_names = [
         t.name
         for t in tools
-        if t.name not in {"get_proxy_status", "preview_workflow_steps"}
+        if t.name not in {"get_proxy_status", "preview_workflow_steps", "check_workflow_compatibility", "preview_compatibility_report"}
     ]
     return {
         "status": "online",
@@ -232,6 +220,129 @@ async def preview_workflow_steps(workflow_id: str) -> Dict[str, Any]:
                 for idx, step in enumerate(wf.steps)
             ],
         }
+
+
+@mcp.tool()
+async def check_workflow_compatibility(workflow_id: str, target_ip: str) -> Dict[str, Any]:
+    """
+    Evaluates real-time compatibility of a workflow against a specific target server IP.
+    Fetches target configuration details and matches them against active rules catalog guidelines.
+    """
+    from src.core.compatibility.sources import CachedFactsProvider, StaticFactsProvider, RedfishFactsProvider
+    from src.core.compatibility.repository import CompatibilityRepository
+    from src.core.compatibility.engine import CompatibilityEngine
+    from src.core.compatibility.models import BaseExplainabilityReport
+    
+    # 1. Fetch workflow steps
+    async with async_session() as session:
+        result = await session.execute(
+            select(Workflow)
+            .where(Workflow.id == workflow_id)
+            .options(selectinload(Workflow.steps))
+        )
+        wf = result.scalar_one_or_none()
+        if not wf:
+            return {"error": f"Workflow '{workflow_id}' not found."}
+        steps = wf.steps
+
+    # 2. Query target device facts
+    repo = CompatibilityRepository()
+    engine = CompatibilityEngine(repo)
+    
+    try:
+        provider = RedfishFactsProvider()
+        facts = await provider.get_device_facts(target_ip)
+        await repo.save_device_facts(facts)
+    except Exception:
+        try:
+            facts = await CachedFactsProvider().get_device_facts(target_ip)
+        except Exception:
+            facts = await StaticFactsProvider().get_device_facts(target_ip)
+            
+    # 3. Perform validation
+    report = await engine.validate_workflow(workflow_id, steps, facts)
+
+    unsupported = [v.actual_value for v in report.violations if v.field_checked == "device_model"]
+    remediation = [v.remediation_step for v in report.violations if v.remediation_step]
+    
+    explain_report = BaseExplainabilityReport(
+        workflow_id=workflow_id,
+        workflow_display_name=wf.display_name,
+        compatibility_score=report.compatibility_score,
+        overall_risk_level="DESTRUCTIVE" if report.risk_score >= 80 else ("CONFIG_CHANGE" if report.risk_score >= 40 else "READ_ONLY"),
+        confidence_level=report.confidence_score,
+        blast_radius=report.blast_radius,
+        unsupported_models=unsupported,
+        remediation_actions=remediation,
+        risk_heatmap_data={}
+    )
+
+    return {
+        "compatibility_summary": f"Status: {report.status.value}, Score: {report.compatibility_score}%",
+        "explainability_summary": f"Verified workflow compliance for model '{facts.device_model}'.",
+        "blast_radius_summary": f"Containment level: {explain_report.blast_radius}",
+        "risk_summary": f"Risk rating: {explain_report.overall_risk_level} ({report.risk_score}/100)",
+        "confidence_summary": f"Confidence index: {report.confidence_score}%",
+        "explain_report": explain_report.model_dump(),
+        "findings": [f.model_dump() for f in report.findings],
+        "violations": [v.model_dump() for v in report.violations],
+    }
+
+
+@mcp.tool()
+async def preview_compatibility_report(workflow_id: str) -> Dict[str, Any]:
+    """
+    Previews structural workflow compatibility risks and prerequisite dependency rules
+    against a standard model baseline.
+    """
+    from src.core.compatibility.sources import StaticFactsProvider
+    from src.core.compatibility.repository import CompatibilityRepository
+    from src.core.compatibility.engine import CompatibilityEngine
+    from src.core.compatibility.models import BaseExplainabilityReport
+
+    # 1. Fetch workflow steps
+    async with async_session() as session:
+        result = await session.execute(
+            select(Workflow)
+            .where(Workflow.id == workflow_id)
+            .options(selectinload(Workflow.steps))
+        )
+        wf = result.scalar_one_or_none()
+        if not wf:
+            return {"error": f"Workflow '{workflow_id}' not found."}
+        steps = wf.steps
+
+    repo = CompatibilityRepository()
+    engine = CompatibilityEngine(repo)
+    
+    facts = await StaticFactsProvider().get_device_facts("192.168.0.120")
+    report = await engine.validate_workflow(workflow_id, steps, facts)
+
+    unsupported = [v.actual_value for v in report.violations if v.field_checked == "device_model"]
+    remediation = [v.remediation_step for v in report.violations if v.remediation_step]
+    
+    explain_report = BaseExplainabilityReport(
+        workflow_id=workflow_id,
+        workflow_display_name=wf.display_name,
+        compatibility_score=report.compatibility_score,
+        overall_risk_level="DESTRUCTIVE" if report.risk_score >= 80 else ("CONFIG_CHANGE" if report.risk_score >= 40 else "READ_ONLY"),
+        confidence_level=report.confidence_score,
+        blast_radius=report.blast_radius,
+        unsupported_models=unsupported,
+        remediation_actions=remediation,
+        risk_heatmap_data={}
+    )
+
+    return {
+        "compatibility_summary": f"Status: {report.status.value}, Score: {report.compatibility_score}%",
+        "explainability_summary": f"Verified workflow compliance for model '{facts.device_model}'.",
+        "blast_radius_summary": f"Containment level: {explain_report.blast_radius}",
+        "risk_summary": f"Risk rating: {explain_report.overall_risk_level} ({report.risk_score}/100)",
+        "confidence_summary": f"Confidence index: {report.confidence_score}%",
+        "explain_report": explain_report.model_dump(),
+        "findings": [f.model_dump() for f in report.findings],
+        "violations": [v.model_dump() for v in report.violations],
+    }
 
 
 # Define FastAPI Lifespan context manager
@@ -284,7 +395,7 @@ async def reload_mcp_tools():
         # Dynamically clear existing dynamic tools in the mcp instance
         tools = await mcp.list_tools()
         for tool in tools:
-            if tool.name not in {"get_proxy_status", "preview_workflow_steps"}:
+            if tool.name not in {"get_proxy_status", "preview_workflow_steps", "check_workflow_compatibility", "preview_compatibility_report"}:
                 try:
                     mcp.local_provider.remove_tool(tool.name)
                     logger.info(f"Removed dynamic tool: {tool.name}")
