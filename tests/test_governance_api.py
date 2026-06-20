@@ -141,8 +141,8 @@ def test_fastapi_endpoints() -> None:
     # Seed DB first
     dummy_eps = [
         {
-            "operation_id": "GET_/redfish/v1/Systems",
-            "method": "GET",
+            "operation_id": "POST_/redfish/v1/Systems",
+            "method": "POST",
             "url": "/redfish/v1/Systems",
             "required_params": [],
             "community_id": "1",
@@ -181,7 +181,7 @@ def test_fastapi_endpoints() -> None:
     assert len(pending_wfs) == 1
     assert "underlyingEndpoints" in pending_wfs[0]
     assert len(pending_wfs[0]["underlyingEndpoints"]) == 1
-    assert pending_wfs[0]["underlyingEndpoints"][0]["operationId"] == "GET_/redfish/v1/Systems"
+    assert pending_wfs[0]["underlyingEndpoints"][0]["operationId"] == "POST_/redfish/v1/Systems"
 
     # 3. Test Update Workflow PATCH
     response = client.patch(
