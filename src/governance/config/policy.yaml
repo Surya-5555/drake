@@ -1,0 +1,34 @@
+version: 1.0
+name: Enterprise_MCP_Governance
+
+risk_classification:
+  high_risk_methods: ["DELETE", "PATCH", "PUT"]
+  high_risk_keywords: ["reboot", "power", "firmware", "reset", "format"]
+  read_only_methods: ["GET", "HEAD"]
+
+rules:
+  - name: AutoApproveReadOnly
+    condition: "workflow.risk_level == 'LOW' and workflow.is_read_only == True"
+    action: AUTO_APPROVE
+
+  - name: BlockDestructiveBulk
+    condition: "'DELETE' in workflow.actions and workflow.is_bulk == True"
+    action: DENY
+    reason: "Bulk destructive operations are not permitted via MCP."
+
+  - name: RequireApprovalForHighRisk
+    condition: "workflow.risk_level == 'HIGH'"
+    action: REQUIRE_APPROVAL
+    
+limits:
+  max_workflow_steps: 10
+  rate_limit: "100/minute"
+  timeout_ms: 30000
+  retry:
+    max_attempts: 3
+    backoff: exponential
+
+security:
+  mask_fields: ["password", "token", "secret", "authorization", "ssn"]
+  protected_endpoints:
+    - path: "/api/v1/auth/*"
