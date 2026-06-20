@@ -131,9 +131,10 @@ async def load_approved_tools_from_db() -> None:
                 try:
                     if step.request_schema:
                         schema = json.loads(step.request_schema)
-                        schemas_doc.append(f"""
-Step {step.step_order} ({step.method} {step.url}) Body Schema:
-{json.dumps(schema, indent=2)}""")
+                        schemas_doc.append(
+                            f"\nStep {step.step_order} ({step.method} {step.url}) Body Schema:\n"
+                            f"{json.dumps(schema, indent=2)}"
+                        )
                         # Extract top-level properties from schema and add to parameters
                         if schema.get("type") == "object" and "properties" in schema:
                             for prop, details in schema["properties"].items():

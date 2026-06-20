@@ -41,6 +41,7 @@ from sqlalchemy import event
 
 @event.listens_for(sync_engine, "connect")
 def set_sqlite_pragma_sync(dbapi_connection, connection_record):
+    dbapi_connection.row_factory = sqlite3.Row
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA busy_timeout=5000")
@@ -49,7 +50,9 @@ def set_sqlite_pragma_sync(dbapi_connection, connection_record):
 def get_db_connection():
     """Create a raw connection to the SQLite database via SQLAlchemy engine to share locking."""
     # We return a raw connection since legacy code relies on it
-    return sync_engine.raw_connection()
+    conn = sync_engine.raw_connection()
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def init_db_sync() -> None:
@@ -70,7 +73,9 @@ def init_db_sync() -> None:
                 method TEXT NOT NULL,
                 url TEXT NOT NULL,
                 required_params TEXT NOT NULL,  -- JSON serialized list of strings
-                community_id TEXT
+                community_id TEXT,
+                request_schema TEXT,
+                response_schema TEXT
             )
             """)
 
@@ -108,6 +113,15 @@ def init_db_sync() -> None:
                 conn.execute("ALTER TABLE workflows ADD COLUMN display_name TEXT DEFAULT 'legacy'")
                 if "workflow_name" in columns:
                     conn.execute("UPDATE workflows SET display_name = workflow_name, system_name = workflow_name")
+        except Exception:
+            pass
+
+        try:
+            cursor = conn.execute("PRAGMA table_info(endpoints)")
+            columns = [row["name"] for row in cursor.fetchall()]
+            if columns and "request_schema" not in columns:
+                conn.execute("ALTER TABLE endpoints ADD COLUMN request_schema TEXT")
+                conn.execute("ALTER TABLE endpoints ADD COLUMN response_schema TEXT")
         except Exception:
             pass
 
@@ -208,10 +222,12 @@ def save_endpoints(endpoints_list: List[Dict[str, Any]]) -> None:
     with get_db_connection() as conn:
         conn.execute("DELETE FROM endpoints")
         for ep in endpoints_list:
+            req_schema = ep.get("request_schema")
+            resp_schema = ep.get("response_schema")
             conn.execute(
                 """
-                INSERT INTO endpoints (operation_id, method, url, required_params, community_id)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO endpoints (operation_id, method, url, required_params, community_id, request_schema, response_schema)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     ep["operation_id"],
@@ -219,6 +235,8 @@ def save_endpoints(endpoints_list: List[Dict[str, Any]]) -> None:
                     ep["url"],
                     json.dumps(ep.get("required_params", [])),
                     ep.get("community_id"),
+                    json.dumps(req_schema) if req_schema is not None else None,
+                    json.dumps(resp_schema) if resp_schema is not None else None,
                 ),
             )
         conn.commit()
