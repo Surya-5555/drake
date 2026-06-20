@@ -3,7 +3,15 @@
     "test_workflow_one": {
       "name": "test_workflow_one",
       "description": "A test workflow description",
-      "steps": []
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GetSystem",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}",
+          "params": {}
+        }
+      ]
     }
   }
 }

@@ -48,7 +48,6 @@ class CompatibilityCLIService:
                     base_url=os.getenv("PRISM_URL", "http://localhost:4010")
                 ).get_device_facts(target_ip)
                 facts.is_live = True
-                await repo.save_device_facts(facts)
             except Exception:
                 try:
                     facts = await CachedFactsProvider().get_device_facts(target_ip)
@@ -56,6 +55,8 @@ class CompatibilityCLIService:
                 except Exception:
                     facts = await StaticFactsProvider().get_device_facts(target_ip)
                     facts.is_live = False
+
+            await repo.save_device_facts(facts)
 
             report = await engine.validate_workflow(str(wf.id), steps, facts)
             await repo.save_report(report)
