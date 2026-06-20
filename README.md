@@ -47,6 +47,21 @@ flowchart TD
 
 ### Editable Development Installation
 Install the project dependencies and wire the executable script locally using `uv`:
+
+#### 1. Install uv
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+#### 2. Install Local LLM Engine (Ollama)
+You must also install and start the local LLM engine Ollama and pull/run the Llama3 model:
+```bash
+# Run Ollama with Llama3 model
+ollama run llama3
+```
+
+#### 3. Environment Setup
+Initialize the virtual environment and install all dependencies:
 ```bash
 # Sync all platform virtual environment dependencies
 uv sync
@@ -60,6 +75,10 @@ uv pip install -e .
 $env:PYTHONIOENCODING="utf-8"
 uv run python -m src.cli.main --help
 ```
+
+*AUDIT Fix: Document environment variables*
+Ensure the following variables are defined in your `.env` file:
+* `DELL_MCP_API_KEY`: The API Key used in `src/proxy/api.py` to authenticate proxy calls and administration endpoints.
 
 ---
 
