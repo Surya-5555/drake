@@ -7,8 +7,6 @@ Validates database operations, graph-based community detection, and FastAPI rout
 
 from __future__ import annotations
 
-import os
-import sqlite3
 from typing import Generator
 
 import pytest
@@ -19,13 +17,11 @@ from src.ai_clustering.graph_clustering import (
     detect_communities,
 )
 from src.core.database import (
-    DB_FILE,
     get_all_endpoints,
     get_db_connection,
     get_pipeline_statuses,
     get_workflows,
     init_db_sync,
-    log_audit_event,
     save_endpoints,
     save_workflows,
     set_pipeline_status,

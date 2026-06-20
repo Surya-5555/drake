@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 class PolicyEngine:
     """Evaluates workflows against governance policies defined in policy.yaml."""
@@ -16,7 +16,7 @@ class PolicyEngine:
         try:
             with open(path, "r") as f:
                 return yaml.safe_load(f)
-        except Exception as e:
+        except Exception:
             # Fallback to empty if not found, let defaults handle it
             return {}
 
@@ -53,7 +53,7 @@ class PolicyEngine:
                         result_status = 1
                     elif action == "REQUIRE_APPROVAL":
                         result_status = 0
-            except Exception as e:
+            except Exception:
                 # Log or handle eval errors
                 pass
 

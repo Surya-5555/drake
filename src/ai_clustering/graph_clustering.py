@@ -10,7 +10,6 @@ community detection, and performs semantic labeling.
 from __future__ import annotations
 
 import logging
-import re
 import urllib.request
 from typing import Any, Dict, List, Set, Tuple
 

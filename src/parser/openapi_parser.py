@@ -1,7 +1,7 @@
 import json
 import yaml
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from pathlib import Path
 from src.core.models import ContractA, EndpointContract, RequiredParameter
 

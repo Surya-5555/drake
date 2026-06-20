@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_workflow_persists_to_database(db_pipeline, sample_workflow):

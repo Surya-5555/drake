@@ -1,5 +1,3 @@
-import pytest
-from pathlib import Path
 
 
 def test_metrics_calculates_endpoint_count(metrics_engine, mock_openapi_path):

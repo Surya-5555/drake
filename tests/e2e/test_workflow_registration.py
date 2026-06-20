@@ -1,4 +1,3 @@
-import pytest
 from src.proxy.server import extract_placeholders_from_steps
 from src.core.database import EndpointStep
 

@@ -8,11 +8,13 @@ class AnsiblePlaybookEnricher:
     """
     Enriches exported Ansible Playbooks with prerequisite updates, system reboots, and status checks.
     """
+
     @staticmethod
     def enrich_playbook_tasks(steps: List[Any]) -> List[Dict[str, Any]]:
         """
         Scan workflow steps and enrich the playbook configuration tasks if target firmware updates are requested.
         """
+
         def get_val(obj, key, default=None):
             try:
                 return obj[key]
@@ -27,10 +29,18 @@ class AnsiblePlaybookEnricher:
 
         for step in steps:
             url = get_val(step, "url", "") or ""
-            op_id = get_val(step, "operation_id", "") or get_val(step, "operationId", "") or ""
+            op_id = (
+                get_val(step, "operation_id", "")
+                or get_val(step, "operationId", "")
+                or ""
+            )
             method = get_val(step, "method", "") or ""
 
-            if "UpdateService.SimpleUpdate" in url or "SimpleUpdate" in op_id or "UpdateService.Install" in url:
+            if (
+                "UpdateService.SimpleUpdate" in url
+                or "SimpleUpdate" in op_id
+                or "UpdateService.Install" in url
+            ):
                 has_firmware_update = True
             if "Systems" in url and method.upper() in ("PATCH", "POST"):
                 has_bios_update = True
@@ -53,20 +63,18 @@ class AnsiblePlaybookEnricher:
                         "force_basic_auth": True,
                         "validate_certs": False,
                         "status_code": [200, 201, 202, 204],
-                    }
+                    },
                 }
                 if method_str in ["POST", "PATCH", "PUT"]:
                     task_data["ansible.builtin.uri"]["body_format"] = "json"
-                    task_data["ansible.builtin.uri"]["body"] = {
-                        "Target": "Example"
-                    }
+                    task_data["ansible.builtin.uri"]["body"] = {"Target": "Example"}
                 task_data["register"] = f"step_{idx + 1}_result"
                 mapped_tasks.append(task_data)
             return mapped_tasks
 
         # Inject BIOS prerequisite updates, reboot, and verify steps
         enriched_tasks = []
-        
+
         # 1. Add BIOS Update step
         bios_update_task = {
             "name": "Prerequisite Step 1 - Update System BIOS to 2.12.0",
@@ -82,12 +90,12 @@ class AnsiblePlaybookEnricher:
                 "body": {
                     "ImageURI": "http://downloads.dell.com/FOLDER123/BIOS_2.12.0.exe",
                     "TransferProtocol": "HTTP",
-                    "Targets": ["/redfish/v1/Systems/System.Embedded.1"]
-                }
+                    "Targets": ["/redfish/v1/Systems/System.Embedded.1"],
+                },
             },
-            "register": "bios_update_result"
+            "register": "bios_update_result",
         }
-        
+
         # 2. Add Reboot System task
         reboot_task = {
             "name": "Prerequisite Step 2 - Reboot System for BIOS Installation",
@@ -100,11 +108,9 @@ class AnsiblePlaybookEnricher:
                 "validate_certs": False,
                 "status_code": [200, 204],
                 "body_format": "json",
-                "body": {
-                    "ResetType": "GracefulRestart"
-                }
+                "body": {"ResetType": "GracefulRestart"},
             },
-            "register": "reboot_result"
+            "register": "reboot_result",
         }
 
         # 3. Add Pause / Wait for connection task
@@ -114,8 +120,8 @@ class AnsiblePlaybookEnricher:
                 "host": "{{ idrac_ip }}",
                 "port": 443,
                 "delay": 30,
-                "timeout": 300
-            }
+                "timeout": 300,
+            },
         }
 
         # 4. Verify BIOS Update task
@@ -128,10 +134,10 @@ class AnsiblePlaybookEnricher:
                 "password": "{{ idrac_password }}",
                 "force_basic_auth": True,
                 "validate_certs": False,
-                "status_code": [200]
+                "status_code": [200],
             },
             "register": "verify_bios_result",
-            "failed_when": "verify_bios_result.json.BiosVersion is version('2.12.0', '<')"
+            "failed_when": "verify_bios_result.json.BiosVersion is version('2.12.0', '<')",
         }
 
         enriched_tasks.extend([bios_update_task, reboot_task, wait_task, verify_task])
@@ -150,13 +156,11 @@ class AnsiblePlaybookEnricher:
                     "force_basic_auth": True,
                     "validate_certs": False,
                     "status_code": [200, 201, 202, 204],
-                }
+                },
             }
             if method_str in ["POST", "PATCH", "PUT"]:
                 task_data["ansible.builtin.uri"]["body_format"] = "json"
-                task_data["ansible.builtin.uri"]["body"] = {
-                    "Target": "Example"
-                }
+                task_data["ansible.builtin.uri"]["body"] = {"Target": "Example"}
             task_data["register"] = f"step_{idx + 5}_result"
             enriched_tasks.append(task_data)
 

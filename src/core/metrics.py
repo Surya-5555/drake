@@ -1,14 +1,13 @@
 import json
 import yaml
 import argparse
-import sys
 import csv
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict
 from pydantic import BaseModel
 import logging
 
-from src.core.database import get_workflows, get_all_endpoints
+from src.core.database import get_workflows
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"

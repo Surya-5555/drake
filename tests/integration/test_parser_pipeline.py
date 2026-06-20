@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 
 
 def test_openapi_loads_successfully(mock_openapi_spec):

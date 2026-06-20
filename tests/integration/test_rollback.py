@@ -1,4 +1,3 @@
-import os
 import pytest
 import datetime
 from pathlib import Path
@@ -9,11 +8,10 @@ from src.core.database import (
     async_session,
     init_db,
     Workflow,
-    EndpointStep,
     ExecutionHistory,
 )
 from src.proxy.executors.workflow_execution_service import WorkflowExecutionService
-from src.proxy.server import revert_previous_action, execute_workflow_route
+from src.proxy.server import revert_previous_action
 
 
 @pytest.mark.anyio

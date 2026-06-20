@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_pending_workflow_exists(approval_pipeline, pending_workflow):

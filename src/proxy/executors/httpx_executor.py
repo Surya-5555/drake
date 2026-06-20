@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 import httpx
 from urllib.parse import urljoin, quote
 from tenacity import (

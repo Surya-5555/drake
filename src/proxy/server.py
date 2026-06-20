@@ -10,7 +10,7 @@ from typing import Any, Dict, Set
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastmcp import FastMCP
 from mcp.server.session import ServerSession
 from sqlalchemy.future import select
@@ -21,13 +21,7 @@ from src.core.database import (
     init_db,
     init_db_sync,
     Workflow,
-    EndpointStep,
     ExecutionHistory,
-)
-from src.proxy.executors import (
-    BaseExecutor,
-    DellOMSDKExecutor,
-    MockHTTPXExecutor,
 )
 
 # Load environment variables
@@ -124,9 +118,6 @@ async def load_approved_tools_from_db() -> None:
     iterates through them, and registers them dynamically using mcp.add_tool().
     """
     import json
-    from pydantic import create_model, Field
-    from src.proxy.executors.httpx_executor import PrismExecutor, MockExecutor
-    from src.proxy.executors.dell_omsdk_executor import DellOMSDKExecutor
 
     async with async_session() as session:
         result = await session.execute(
