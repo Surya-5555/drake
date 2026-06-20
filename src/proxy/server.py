@@ -172,8 +172,18 @@ async def load_approved_tools_from_db() -> None:
                 except Exception:
                     pass
 
-            # Extend description with body schemas
-            desc = wf.generated_description or f"Execute clustered workflow for {name}"
+            # AUDIT1.MD Fix: Multi-step orchestration instructions and causal chain documentation for LLM
+            orchestration_doc = ""
+            if len(wf.steps) > 1:
+                orchestration_doc = "This workflow executes multiple steps. "
+                for idx in range(len(wf.steps) - 1):
+                    orchestration_doc += f"Step {idx + 1} returns {{{{job_id}}}}. You must pass {{{{job_id}}}} into Step {idx + 2}. "
+                orchestration_doc += f"Available input parameters: {list(all_params.keys())}."
+            else:
+                orchestration_doc = f"This workflow executes a single step. Available input parameters: {list(all_params.keys())}."
+
+            # Extend description with body schemas and orchestration instructions
+            desc = orchestration_doc + "\n\n" + (wf.generated_description or f"Execute clustered workflow for {name}")
             if schemas_doc:
                 desc += "\n\n### Required Request Body Structures:\n" + "\n".join(schemas_doc)
 
