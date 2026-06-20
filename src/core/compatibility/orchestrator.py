@@ -188,7 +188,10 @@ class WorkflowExecutionManager:
             mock_server_url = os.getenv("MOCK_SERVER_URL", "http://localhost:8000")
             executor = MockExecutor(base_url=mock_server_url)
 
-        exec_res = await executor.execute_workflow(workflow_name, params)
+        from src.proxy.executors.workflow_execution_service import WorkflowExecutionService
+        target_server_ip = params.get("target_server_ip") or params.get("server_ip") or "127.0.0.1"
+        service = WorkflowExecutionService(executor)
+        exec_res = await service.execute_workflow(workflow_name, target_server_ip, params)
 
         if report:
             exec_res["compatibility_assessment"] = {
