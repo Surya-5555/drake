@@ -13,7 +13,7 @@ class WorkflowValidationError(Exception):
     pass
 
 class Settings:
-    OLLAMA_MODEL = "llama3"
+    OLLAMA_MODEL = "qwen2.5-coder:14b"
     OLLAMA_TIMEOUT = 30.0
 
 settings = Settings()
