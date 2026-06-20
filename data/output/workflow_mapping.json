@@ -1341,21 +1341,6 @@
           "params": {}
         }
       ]
-    },
-    "firmware_update_realtime": {
-      "name": "firmware_update_realtime",
-      "description": "Realtime test workflow with strategy DUAL_BANK",
-      "steps": []
-    },
-    "bios_config_realtime": {
-      "name": "bios_config_realtime",
-      "description": "Realtime test workflow with strategy SCP_SNAPSHOT",
-      "steps": []
-    },
-    "factory_reset_realtime": {
-      "name": "factory_reset_realtime",
-      "description": "Realtime test workflow with strategy NONE",
-      "steps": []
     }
   }
 }
