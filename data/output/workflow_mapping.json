@@ -1,5 +1,744 @@
 {
   "workflows": {
+    "dell_raid_service_operations": {
+      "name": "dell_raid_service_operations",
+      "description": "Manages Dell RAID configurations and operations.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "Action_AssignSpare_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.AssignSpare",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.AssignSpare",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "Action_BlinkTarget_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.BlinkTarget",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.BlinkTarget",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "Action_CancelBackgroundInitialization_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CancelBackgroundInitialization",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CancelBackgroundInitialization",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "Action_CancelCheckConsistency_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CancelCheckConsistency",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CancelCheckConsistency",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "Action_CancelRebuildPhysicalDisk_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CancelRebuildPhysicalDisk",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CancelRebuildPhysicalDisk",
+          "params": {}
+        },
+        {
+          "step_id": 6,
+          "name": "Action_ChangePDState_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ChangePDState",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ChangePDState",
+          "params": {}
+        },
+        {
+          "step_id": 7,
+          "name": "Action_CheckVDValues_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CheckVDValues",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CheckVDValues",
+          "params": {}
+        },
+        {
+          "step_id": 8,
+          "name": "Action_ClearControllerPreservedCache_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ClearControllerPreservedCache",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ClearControllerPreservedCache",
+          "params": {}
+        },
+        {
+          "step_id": 9,
+          "name": "Action_ClearForeignConfig_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ClearForeignConfig",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ClearForeignConfig",
+          "params": {}
+        },
+        {
+          "step_id": 10,
+          "name": "Action_ConvertToNonRAID_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ConvertToNonRAID",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ConvertToNonRAID",
+          "params": {}
+        },
+        {
+          "step_id": 11,
+          "name": "Action_ConvertToRAID_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ConvertToRAID",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ConvertToRAID",
+          "params": {}
+        },
+        {
+          "step_id": 12,
+          "name": "Action_CryptographicEraseWithPSID_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CryptographicEraseWithPSID",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.CryptographicEraseWithPSID",
+          "params": {}
+        },
+        {
+          "step_id": 13,
+          "name": "Action_DisableSecurity_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.DisableSecurity",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.DisableSecurity",
+          "params": {}
+        },
+        {
+          "step_id": 14,
+          "name": "Action_EnableControllerEncryption_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.EnableControllerEncryption",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.EnableControllerEncryption",
+          "params": {}
+        },
+        {
+          "step_id": 15,
+          "name": "Action_EnableSecurity_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.EnableSecurity",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.EnableSecurity",
+          "params": {}
+        },
+        {
+          "step_id": 16,
+          "name": "Action_GetAvailableDisks_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.GetAvailableDisks",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.GetAvailableDisks",
+          "params": {}
+        },
+        {
+          "step_id": 17,
+          "name": "Action_GetDHSDisks_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.GetDHSDisks",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.GetDHSDisks",
+          "params": {}
+        },
+        {
+          "step_id": 18,
+          "name": "Action_GetRAIDLevels_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.GetRAIDLevels",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.GetRAIDLevels",
+          "params": {}
+        },
+        {
+          "step_id": 19,
+          "name": "Action_ImportForeignConfig_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ImportForeignConfig",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ImportForeignConfig",
+          "params": {}
+        },
+        {
+          "step_id": 20,
+          "name": "Action_LockVirtualDisk_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.LockVirtualDisk",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.LockVirtualDisk",
+          "params": {}
+        },
+        {
+          "step_id": 21,
+          "name": "Action_OnlineCapacityExpansion_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.OnlineCapacityExpansion",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.OnlineCapacityExpansion",
+          "params": {}
+        },
+        {
+          "step_id": 22,
+          "name": "Action_PrepareToRemove_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.PrepareToRemove",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.PrepareToRemove",
+          "params": {}
+        },
+        {
+          "step_id": 23,
+          "name": "Action_RAIDLevelMigration_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.RAIDLevelMigration",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.RAIDLevelMigration",
+          "params": {}
+        },
+        {
+          "step_id": 24,
+          "name": "Action_ReKey_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ReKey",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ReKey",
+          "params": {}
+        },
+        {
+          "step_id": 25,
+          "name": "Action_RebuildPhysicalDisk_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.RebuildPhysicalDisk",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.RebuildPhysicalDisk",
+          "params": {}
+        },
+        {
+          "step_id": 26,
+          "name": "Action_RemoveControllerKey_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.RemoveControllerKey",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.RemoveControllerKey",
+          "params": {}
+        },
+        {
+          "step_id": 27,
+          "name": "Action_RenameVD_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.RenameVD",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.RenameVD",
+          "params": {}
+        },
+        {
+          "step_id": 28,
+          "name": "Action_ReplacePhysicalDisk_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ReplacePhysicalDisk",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ReplacePhysicalDisk",
+          "params": {}
+        },
+        {
+          "step_id": 29,
+          "name": "Action_ResetConfig_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ResetConfig",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.ResetConfig",
+          "params": {}
+        },
+        {
+          "step_id": 30,
+          "name": "Action_SetAssetName_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.SetAssetName",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.SetAssetName",
+          "params": {}
+        },
+        {
+          "step_id": 31,
+          "name": "Action_SetBootVD_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.SetBootVD",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.SetBootVD",
+          "params": {}
+        },
+        {
+          "step_id": 32,
+          "name": "Action_SetControllerKey_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.SetControllerKey",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.SetControllerKey",
+          "params": {}
+        },
+        {
+          "step_id": 33,
+          "name": "Action_StartPatrolRead_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.StartPatrolRead",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.StartPatrolRead",
+          "params": {}
+        },
+        {
+          "step_id": 34,
+          "name": "Action_StopPatrolRead_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.StopPatrolRead",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.StopPatrolRead",
+          "params": {}
+        },
+        {
+          "step_id": 35,
+          "name": "Action_UnBlinkTarget_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.UnBlinkTarget",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.UnBlinkTarget",
+          "params": {}
+        },
+        {
+          "step_id": 36,
+          "name": "Action_UnLockSecureForeignConfig_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.UnLockSecureForeignConfig",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.UnLockSecureForeignConfig",
+          "params": {}
+        },
+        {
+          "step_id": 37,
+          "name": "Action_UnassignSpare_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.UnassignSpare",
+          "method": "POST",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService/Actions/DellRaidService.UnassignSpare",
+          "params": {}
+        },
+        {
+          "step_id": 38,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRaidService",
+          "params": {}
+        }
+      ]
+    },
+    "dell_l_c_service_operations": {
+      "name": "dell_l_c_service_operations",
+      "description": "Manages various server lifecycle and support operations.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "Action_ClearProvisioningServer_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ClearProvisioningServer",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ClearProvisioningServer",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "Action_DeleteAutoDiscoveryClientCerts_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.DeleteAutoDiscoveryClientCerts",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.DeleteAutoDiscoveryClientCerts",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "Action_DeleteAutoDiscoveryServerPublicKey_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.DeleteAutoDiscoveryServerPublicKey",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.DeleteAutoDiscoveryServerPublicKey",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "Action_DownloadClientCerts_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.DownloadClientCerts",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.DownloadClientCerts",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "Action_ExportCompleteLCLog_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportCompleteLCLog",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportCompleteLCLog",
+          "params": {}
+        },
+        {
+          "step_id": 6,
+          "name": "Action_ExportFactoryConfiguration_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportFactoryConfiguration",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportFactoryConfiguration",
+          "params": {}
+        },
+        {
+          "step_id": 7,
+          "name": "Action_ExportHWInventory_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportHWInventory",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportHWInventory",
+          "params": {}
+        },
+        {
+          "step_id": 8,
+          "name": "Action_ExportLCLog_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportLCLog",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportLCLog",
+          "params": {}
+        },
+        {
+          "step_id": 9,
+          "name": "Action_ExportSVGFile_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportSVGFile",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportSVGFile",
+          "params": {}
+        },
+        {
+          "step_id": 10,
+          "name": "Action_ExportServerScreenShot_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportServerScreenShot",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportServerScreenShot",
+          "params": {}
+        },
+        {
+          "step_id": 11,
+          "name": "Action_ExportTechSupportReport_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportTechSupportReport",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportTechSupportReport",
+          "params": {}
+        },
+        {
+          "step_id": 12,
+          "name": "Action_ExportVideoLog_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportVideoLog",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportVideoLog",
+          "params": {}
+        },
+        {
+          "step_id": 13,
+          "name": "Action_ExportePSADiagnosticsResult_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportePSADiagnosticsResult",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExportePSADiagnosticsResult",
+          "params": {}
+        },
+        {
+          "step_id": 14,
+          "name": "Action_ExposeiSMInstallerToHostOS_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExposeiSMInstallerToHostOS",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ExposeiSMInstallerToHostOS",
+          "params": {}
+        },
+        {
+          "step_id": 15,
+          "name": "Action_GetRSStatus_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.GetRSStatus",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.GetRSStatus",
+          "params": {}
+        },
+        {
+          "step_id": 16,
+          "name": "Action_GetRemoteServicesAPIStatus_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.GetRemoteServicesAPIStatus",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.GetRemoteServicesAPIStatus",
+          "params": {}
+        },
+        {
+          "step_id": 17,
+          "name": "Action_InsertCommentInLCLog_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.InsertCommentInLCLog",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.InsertCommentInLCLog",
+          "params": {}
+        },
+        {
+          "step_id": 18,
+          "name": "Action_LCWipe_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.LCWipe",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.LCWipe",
+          "params": {}
+        },
+        {
+          "step_id": 19,
+          "name": "Action_ReInitiateAutoDiscovery_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ReInitiateAutoDiscovery",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ReInitiateAutoDiscovery",
+          "params": {}
+        },
+        {
+          "step_id": 20,
+          "name": "Action_ReInitiateDHS_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ReInitiateDHS",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.ReInitiateDHS",
+          "params": {}
+        },
+        {
+          "step_id": 21,
+          "name": "Action_RunePSADiagnostics_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.RunePSADiagnostics",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.RunePSADiagnostics",
+          "params": {}
+        },
+        {
+          "step_id": 22,
+          "name": "Action_SupportAssistAcceptEULA_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistAcceptEULA",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistAcceptEULA",
+          "params": {}
+        },
+        {
+          "step_id": 23,
+          "name": "Action_SupportAssistClearAutoCollectSchedule_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistClearAutoCollectSchedule",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistClearAutoCollectSchedule",
+          "params": {}
+        },
+        {
+          "step_id": 24,
+          "name": "Action_SupportAssistCollection_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistCollection",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistCollection",
+          "params": {}
+        },
+        {
+          "step_id": 25,
+          "name": "Action_SupportAssistExportLastCollection_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistExportLastCollection",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistExportLastCollection",
+          "params": {}
+        },
+        {
+          "step_id": 26,
+          "name": "Action_SupportAssistGetAutoCollectSchedule_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistGetAutoCollectSchedule",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistGetAutoCollectSchedule",
+          "params": {}
+        },
+        {
+          "step_id": 27,
+          "name": "Action_SupportAssistGetEULAStatus_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistGetEULAStatus",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistGetEULAStatus",
+          "params": {}
+        },
+        {
+          "step_id": 28,
+          "name": "Action_SupportAssistRegister_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistRegister",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistRegister",
+          "params": {}
+        },
+        {
+          "step_id": 29,
+          "name": "Action_SupportAssistSetAutoCollectSchedule_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistSetAutoCollectSchedule",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistSetAutoCollectSchedule",
+          "params": {}
+        },
+        {
+          "step_id": 30,
+          "name": "Action_SupportAssistUploadLastCollection_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistUploadLastCollection",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SupportAssistUploadLastCollection",
+          "params": {}
+        },
+        {
+          "step_id": 31,
+          "name": "Action_SystemErase_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SystemErase",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.SystemErase",
+          "params": {}
+        },
+        {
+          "step_id": 32,
+          "name": "Action_TestNetworkShare_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.TestNetworkShare",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.TestNetworkShare",
+          "params": {}
+        },
+        {
+          "step_id": 33,
+          "name": "Action_UpdateOSAppHealthData_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.UpdateOSAppHealthData",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService/Actions/DellLCService.UpdateOSAppHealthData",
+          "params": {}
+        },
+        {
+          "step_id": 34,
+          "name": "GET_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService",
+          "method": "GET",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellLCService",
+          "params": {}
+        }
+      ]
+    },
+    "delli_d_r_a_c_card_service_operations": {
+      "name": "delli_d_r_a_c_card_service_operations",
+      "description": "Handles various configuration and management tasks for Dell iDRAC cards.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "Action_DeleteCertificate_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DeleteCertificate",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DeleteCertificate",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "Action_DeleteGroup_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DeleteGroup",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DeleteGroup",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "Action_DeleteSSLCertificate_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DeleteSSLCertificate",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DeleteSSLCertificate",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "Action_DisableSEKM_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DisableSEKM",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DisableSEKM",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "Action_DisableiLKM_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DisableiLKM",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.DisableiLKM",
+          "params": {}
+        },
+        {
+          "step_id": 6,
+          "name": "Action_EnableSEKM_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.EnableSEKM",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.EnableSEKM",
+          "params": {}
+        },
+        {
+          "step_id": 7,
+          "name": "Action_EnableiLKM_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.EnableiLKM",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.EnableiLKM",
+          "params": {}
+        },
+        {
+          "step_id": 8,
+          "name": "Action_ExportCertificate_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.ExportCertificate",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.ExportCertificate",
+          "params": {}
+        },
+        {
+          "step_id": 9,
+          "name": "Action_ExportSSLCertificate_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.ExportSSLCertificate",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.ExportSSLCertificate",
+          "params": {}
+        },
+        {
+          "step_id": 10,
+          "name": "Action_FactoryIdentityCertificateGenerateCSR_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.FactoryIdentityCertificateGenerateCSR",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.FactoryIdentityCertificateGenerateCSR",
+          "params": {}
+        },
+        {
+          "step_id": 11,
+          "name": "Action_FactoryIdentityExportCertificate_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.FactoryIdentityExportCertificate",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.FactoryIdentityExportCertificate",
+          "params": {}
+        },
+        {
+          "step_id": 12,
+          "name": "Action_FactoryIdentityImportCertificate_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.FactoryIdentityImportCertificate",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.FactoryIdentityImportCertificate",
+          "params": {}
+        },
+        {
+          "step_id": 13,
+          "name": "Action_GenerateSEKMCSR_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.GenerateSEKMCSR",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.GenerateSEKMCSR",
+          "params": {}
+        },
+        {
+          "step_id": 14,
+          "name": "Action_GetKVMSession_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.GetKVMSession",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.GetKVMSession",
+          "params": {}
+        },
+        {
+          "step_id": 15,
+          "name": "Action_ImportCertificate_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.ImportCertificate",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.ImportCertificate",
+          "params": {}
+        },
+        {
+          "step_id": 16,
+          "name": "Action_ImportSSLCertificate_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.ImportSSLCertificate",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.ImportSSLCertificate",
+          "params": {}
+        },
+        {
+          "step_id": 17,
+          "name": "Action_JoinGroup_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.JoinGroup",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.JoinGroup",
+          "params": {}
+        },
+        {
+          "step_id": 18,
+          "name": "Action_PeriodicSyncWithKMS_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.PeriodicSyncWithKMS",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.PeriodicSyncWithKMS",
+          "params": {}
+        },
+        {
+          "step_id": 19,
+          "name": "Action_Rekey_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.Rekey",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.Rekey",
+          "params": {}
+        },
+        {
+          "step_id": 20,
+          "name": "Action_RemoveSelf_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.RemoveSelf",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.RemoveSelf",
+          "params": {}
+        },
+        {
+          "step_id": 21,
+          "name": "Action_SSLResetCfg_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.SSLResetCfg",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.SSLResetCfg",
+          "params": {}
+        },
+        {
+          "step_id": 22,
+          "name": "Action_SendTestEmailAlert_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.SendTestEmailAlert",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.SendTestEmailAlert",
+          "params": {}
+        },
+        {
+          "step_id": 23,
+          "name": "Action_SendTestSNMPTrap_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.SendTestSNMPTrap",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.SendTestSNMPTrap",
+          "params": {}
+        },
+        {
+          "step_id": 24,
+          "name": "Action_TestConnection_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.TestConnection",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.TestConnection",
+          "params": {}
+        },
+        {
+          "step_id": 25,
+          "name": "Action_TestSEKMServerConnection_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.TestSEKMServerConnection",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.TestSEKMServerConnection",
+          "params": {}
+        },
+        {
+          "step_id": 26,
+          "name": "Action_UploadSSLKey_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.UploadSSLKey",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.UploadSSLKey",
+          "params": {}
+        },
+        {
+          "step_id": 27,
+          "name": "Action_VerifyHWProofOfPossession_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.VerifyHWProofOfPossession",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.VerifyHWProofOfPossession",
+          "params": {}
+        },
+        {
+          "step_id": 28,
+          "name": "Action_iDRACResetCfg_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.iDRACResetCfg",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.iDRACResetCfg",
+          "params": {}
+        },
+        {
+          "step_id": 29,
+          "name": "Action_iDRACReset_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.iDRACReset",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.iDRACReset",
+          "params": {}
+        },
+        {
+          "step_id": 30,
+          "name": "Action_iLKMToSEKMTransition_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.iLKMToSEKMTransition",
+          "method": "POST",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService/Actions/DelliDRACCardService.iLKMToSEKMTransition",
+          "params": {}
+        },
+        {
+          "step_id": 31,
+          "name": "GET_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService",
+          "method": "GET",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DelliDRACCardService",
+          "params": {}
+        }
+      ]
+    },
     "dell_f_c_management": {
       "name": "dell_f_c_management",
       "description": "Observability layer for Dell F C Management. Configured with 15 underlying endpoints.",
@@ -1341,6 +2080,11 @@
           "params": {}
         }
       ]
+    },
+    "mini_sys_reset_workflow": {
+      "name": "mini_sys_reset_workflow",
+      "description": "Mock system status check and reset action",
+      "steps": []
     }
   }
 }
