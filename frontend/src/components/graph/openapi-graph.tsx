@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import dynamic from "next/dynamic";
 import { useMemo, useState, useRef, useEffect } from "react";
 

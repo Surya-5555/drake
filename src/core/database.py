@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy import Column, String, Integer, ForeignKey, Float
+from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime
 
 # ===========================================================================
 # Synchronous Database Persistence (Legacy & Admin Dashboards)
@@ -137,7 +137,9 @@ def init_db_sync() -> None:
                 generated_description TEXT NOT NULL,
                 approved INTEGER NOT NULL DEFAULT 0,  -- 0=pending, 1=approved, 2=rejected
                 rejection_reason TEXT,
-                community_id TEXT
+                community_id TEXT,
+                supports_rollback INTEGER DEFAULT 0,
+                rollback_strategy TEXT DEFAULT 'NONE'
             )
             """)
         
@@ -169,6 +171,9 @@ def init_db_sync() -> None:
                     conn.execute("ALTER TABLE workflows ADD COLUMN last_execution_status TEXT")
                 if "rollback_version" not in columns:
                     conn.execute("ALTER TABLE workflows ADD COLUMN rollback_version INTEGER")
+                if "supports_rollback" not in columns:
+                    conn.execute("ALTER TABLE workflows ADD COLUMN supports_rollback INTEGER DEFAULT 0")
+                    conn.execute("ALTER TABLE workflows ADD COLUMN rollback_strategy TEXT DEFAULT 'NONE'")
         except Exception:
             pass
 
@@ -328,6 +333,18 @@ def init_db_sync() -> None:
                 (p_id, name, risk, adjustments, coeff, max_score)
             )
 
+        # 13. Execution history ledger
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS execution_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target_server_ip TEXT NOT NULL,
+                workflow_id TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                snapshot_path TEXT,
+                status TEXT NOT NULL,
+                FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+            )
+            """)
         # Populate default statuses if empty
         for stage in [
             "ingestionStatus",
@@ -714,7 +731,6 @@ class Workflow(Base):
     approved = Column(Integer, default=0)
     rejection_reason = Column(String)
     community_id = Column(String)
-    
     # New hackathon enterprise additions
     workflow_version = Column(Integer, default=1)
     approved_by = Column(String)
@@ -725,6 +741,8 @@ class Workflow(Base):
     execution_count = Column(Integer, default=0)
     last_execution_status = Column(String)
     rollback_version = Column(Integer)
+    supports_rollback = Column(Boolean, default=False)
+    rollback_strategy = Column(String, default="NONE")
 
     steps = relationship(
         "EndpointStep",
@@ -829,6 +847,25 @@ class RiskProfile(Base):
     max_risk_score = Column(Integer, nullable=False)
 
 
+class ExecutionHistory(Base):
+    """
+    SQLAlchemy model representing the execution ledger for state-aware rollback.
+    """
+
+    __tablename__ = "execution_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    target_server_ip = Column(String, nullable=False)
+    workflow_id = Column(
+        String, ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    snapshot_path = Column(String, nullable=True)
+    status = Column(String, nullable=False)
+
+    workflow = relationship("Workflow")
+
+
 async def init_db() -> None:
     """Initialize database tables asynchronously if they do not exist."""
     async with engine.begin() as conn:
@@ -889,9 +926,9 @@ async def sync_governance_to_mcp_proxy() -> None:
                     display_name=gwf["display_name"],
                     generated_description=gwf["generated_description"],
                     risk_level=gwf["risk_level"],
+                    supports_rollback=bool(gwf.get("supports_rollback", 0)),
+                    rollback_strategy=gwf.get("rollback_strategy", "NONE"),
                 )
-                # Map status correctly (Wait, original Workflow model didn't have status, it had approved. Ah! The DB model doesn't have status, wait... original code mapped it to `status` which isn't a column on Workflow!)
-                # Wait, I noticed earlier the Workflow model has `approved` but the sync code was using `status` and `name`! Let me fix this bug while I'm at it.
                 wf.approved = gwf["approved"]
                 session.add(wf)
             else:
@@ -900,6 +937,8 @@ async def sync_governance_to_mcp_proxy() -> None:
                 wf.generated_description = gwf["generated_description"]
                 wf.risk_level = gwf["risk_level"]
                 wf.approved = gwf["approved"]
+                wf.supports_rollback = bool(gwf.get("supports_rollback", 0))
+                wf.rollback_strategy = gwf.get("rollback_strategy", "NONE")
 
             # Synchronize steps
             underlying = community_to_endpoints[comm_id]

@@ -157,8 +157,11 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
         p95 = np.percentile(all_scores, 95)
         
         # We mathematically clamp the similarity threshold between [0.71, 0.72] to guarantee 
-        # the optimal "Goldilocks Zone" for LLM context window limits and tool precision.
-        threshold = max(0.71, min(0.72, p90))
+        # the optimal "Goldilocks Zone" for LLM context window limits and tool precision in production.
+        if num_nodes >= 50:
+            threshold = max(0.71, min(0.72, p90))
+        else:
+            threshold = max(0.50, min(0.70, p90))
     else:
         threshold = 0.50
         p75 = p80 = p85 = p90 = p95 = 0.0
