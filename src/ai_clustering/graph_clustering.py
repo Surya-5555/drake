@@ -466,7 +466,8 @@ def run_pipeline(contract_a_data: ContractA) -> None:
             )
             explain_print("COMMUNITY VALIDATION", content)
 
-    updated_endpoints = []
+    # Build a lookup dict so every endpoint gets its community_id assigned exactly once
+    ep_by_op_id = {ep["operation_id"]: ep for ep in endpoints}
     workflows_list = []
 
     for comm in communities:
@@ -476,12 +477,10 @@ def run_pipeline(contract_a_data: ContractA) -> None:
 
         comm_endpoints = []
         for op_id in sorted_ops:
-            for ep in endpoints:
-                if ep["operation_id"] == op_id:
-                    ep["community_id"] = comm_id
-                    updated_endpoints.append(ep)
-                    comm_endpoints.append(ep)
-                    break
+            ep = ep_by_op_id.get(op_id)
+            if ep is not None:
+                ep["community_id"] = comm_id
+                comm_endpoints.append(ep)
 
         workflow_id = f"wf_{comm_id}"
         system_name, display_name, wf_desc, confidence = generate_semantic_label(
@@ -511,6 +510,8 @@ def run_pipeline(contract_a_data: ContractA) -> None:
             }
         )
 
+    # Save ALL endpoints (community_id now set for every one)
+    updated_endpoints = list(ep_by_op_id.values())
     save_endpoints(updated_endpoints)
     save_workflows(workflows_list)
     log_audit_event(

@@ -70,32 +70,48 @@ uv sync
 uv pip install -e .
 ```
 
-*Note: In default Windows environments, you can verify execution paths by running:*
-```bash
-$env:PYTHONIOENCODING="utf-8"
-uv run python -m src.cli.main --help
+#### 4. Activate the Virtual Environment
+Activate the `uv`-managed virtual environment so that `dell-mcp` resolves to the correct venv binary:
+```powershell
+# Windows (PowerShell) — run once per terminal session
+.venv\Scripts\Activate.ps1
 ```
 
-*AUDIT Fix: Document environment variables*
-Ensure the following variables are defined in your `.env` file:
-* `DELL_MCP_API_KEY`: The API Key used in `src/proxy/api.py` to authenticate proxy calls and administration endpoints.
+After activation, run bare `dell-mcp` commands directly:
+```bash
+dell-mcp --help
+```
+
+> **Alternative (no activation needed):** Prefix every command with `uv run`:
+> ```bash
+> uv run dell-mcp --help
+> uv run dell-mcp overview
+> ```
+
+> **Environment Variable:** Ensure the following variable is defined in your `.env` file:
+> `DELL_MCP_API_KEY` — used in `src/proxy/api.py` to authenticate proxy calls and administration endpoints.
 
 ---
 
 ## Quick Start
 
-Quickly assess the command center and verify that database connections and service states are operational:
+Activate the virtual environment first, then run commands:
 
-```bash
-# Print global help instructions and subcommand catalog
+```powershell
+# 1. Activate venv (once per terminal session)
+.venv\Scripts\Activate.ps1
+
+# 2. Print global help instructions and subcommand catalog
 dell-mcp --help
 
-# Render the executive control plane dashboard overview
+# 3. Render the executive control plane dashboard overview
 dell-mcp overview
 
-# Verify subsystem readiness and health assessment matrix
+# 4. Verify subsystem readiness and health assessment matrix
 dell-mcp health
 ```
+
+> **Or without activation:** prefix every command with `uv run dell-mcp ...`
 
 ---
 
@@ -306,16 +322,17 @@ Operations that alter states (e.g. `governance approve`, `governance reject`) wr
     ```
 
 ### Packaging Script Location Error (`ModuleNotFoundError`)
-*   *Symptom*: Running `dell-mcp` commands raises `ModuleNotFoundError: No module named 'src'`.
-*   *Cause*: Virtual environment entry point loader does not add current directory to python import list.
-*   *Resolution*: Set the Python path variable or execute via the python runner module:
+*   *Symptom*: Running `dell-mcp` raises `ModuleNotFoundError: No module named 'src'`.
+*   *Cause*: The bare `dell-mcp` command resolves to a system-level Python install that does not have access to the project source tree. This happens when the virtual environment is not activated.
+*   *Resolution (preferred)*: Activate the `uv` virtual environment before running any commands:
+    ```powershell
+    .venv\Scripts\Activate.ps1
+    dell-mcp --help
+    ```
+*   *Resolution (alternative)*: Use `uv run` to automatically route through the correct venv:
     ```bash
-    # Setting PYTHONPATH
-    $env:PYTHONPATH="."
-    dell-mcp health
-    
-    # Or execute as module
-    python -m src.cli.main health
+    uv run dell-mcp --help
+    uv run dell-mcp health
     ```
 
 ### SQLite Database Locks
