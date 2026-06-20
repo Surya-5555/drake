@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   ListChecks,
   ScrollText,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,29 +20,31 @@ const navIcons = {
   "/graph": GitBranch,
   "/metrics": Activity,
   "/audit": ScrollText,
-} as const;
+};
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:block">
-      <div className="border-b border-slate-200 px-5 py-4">
-        <div className="text-sm font-semibold text-slate-900">Dell MCP Proxy</div>
-        <div className="text-xs text-slate-500">Governance Console</div>
+    <aside className="hidden w-64 shrink-0 bg-white lg:flex flex-col border-r border-[rgb(var(--border))] rounded-l-3xl">
+      <div className="px-8 py-10">
+        <h1 className="text-xl font-bold text-[rgb(var(--foreground))] flex items-center gap-3">
+          <div className="w-5 h-5 bg-[rgb(var(--primary))] rounded-[4px] rotate-45 shadow-[2px_2px_10px_rgba(189,229,108,0.5)]"></div>
+          Atomie<span className="text-[10px] align-top text-gray-400 font-normal mt-1">TM</span>
+        </h1>
       </div>
-      <nav aria-label="Primary navigation" className="space-y-1 p-3">
+      <nav aria-label="Primary navigation" className="space-y-1.5 px-4 flex-1">
         {navItems.map((item) => {
           const active = isActiveRoute(pathname, item.href);
-          const Icon = navIcons[item.href];
+          const Icon = navIcons[item.href as keyof typeof navIcons];
           return (
             <Link
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-4 rounded-xl px-4 py-3 text-[14px] font-medium transition-all mb-1",
                 active
-                  ? "bg-sky-50 text-sky-900"
-                  : "text-slate-700 hover:bg-slate-100",
+                  ? "bg-[rgb(var(--primary))] text-[rgb(var(--foreground))] shadow-sm"
+                  : "text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))] hover:bg-gray-50",
               )}
               href={item.href}
               key={item.href}
@@ -52,6 +55,12 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <div className="p-4 mt-auto">
+        <div className="flex items-center gap-3 text-sm text-[rgb(var(--muted-foreground))] px-4 py-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+          <Settings className="w-4 h-4" />
+          Settings
+        </div>
+      </div>
     </aside>
   );
 }

@@ -1,330 +1,428 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import dynamic from "next/dynamic";
-import { useMemo, useState, useRef, useEffect } from "react";
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  useNodesState,
+  useEdgesState,
+  MarkerType,
+  type Node,
+  type Edge,
+  type ReactFlowInstance,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import dagre from "dagre";
+import { useEffect, useMemo, useState } from "react";
+import { TreeStructure, Desktop, TerminalWindow, Coins, Graph, CaretRight, CaretLeft, ListDashes, SidebarSimple } from "@phosphor-icons/react";
 
 import { EmptyState } from "@/components/feedback/empty-state";
 import { ErrorState } from "@/components/feedback/error-state";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGraph } from "@/hooks/use-graph";
-import type { GraphCommunity, GraphNode } from "@/lib/types";
 import { useReviewStore } from "@/store/review-store";
+import type { GraphCommunity, GraphNode } from "@/lib/types";
 
-// Dynamically import the force graph to avoid SSR window errors
-const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
-  ssr: false,
-  loading: () => <Skeleton className="h-[620px] w-full" />,
-});
+import { AtomieEdge } from "./atomie-edge";
+import { VoidNode } from "./void-node";
 
-const palette = [
-  "#0f766e", // teal
-  "#2563eb", // blue
-  "#7c3aed", // violet
-  "#b45309", // amber
-  "#be123c", // rose
-  "#15803d", // green
-  "#334155", // slate
-  "#0891b2", // cyan
-  "#c026d3", // fuchsia
-  "#ea580c", // orange
-];
+const nodeTypes = {
+  void: VoidNode,
+};
 
-function GraphCanvas() {
-  const { data, isLoading, error } = useGraph();
-  const { graphClusterFilter, selectedWorkflowId, setGraphClusterFilter } =
-    useReviewStore();
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [selectedCommunity, setSelectedCommunity] = useState<GraphCommunity | null>(
-    null,
-  );
-  
-  const fgRef = useRef<any>(null);
+const edgeTypes = {
+  void: AtomieEdge,
+};
 
-  const communityColor = useMemo(() => {
-    const map = new Map<string, string>();
-    data?.communities.forEach((community, index) => {
-      map.set(community.id, community.color ?? palette[index % palette.length]);
-    });
-    return map;
-  }, [data]);
+const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  // Increase spacing to prevent overlaps
+  dagreGraph.setGraph({ rankdir: "LR", nodesep: 80, ranksep: 200 });
 
-  const filteredNodes = useMemo(() => {
-    if (!data) return [];
-    return data.nodes.filter(
-      (node) => !graphClusterFilter || node.communityId === graphClusterFilter,
-    );
-  }, [data, graphClusterFilter]);
+  const connectedNodeIds = new Set<string>();
+  edges.forEach((e) => {
+    connectedNodeIds.add(e.source);
+    connectedNodeIds.add(e.target);
+  });
 
-  const graphData = useMemo(() => {
-    if (!data) return { nodes: [], links: [] };
-    
-    const visible = new Set(filteredNodes.map((n) => n.id));
-    const nodes = filteredNodes.map((n) => ({
-      ...n,
-      id: n.id,
-      name: `${n.method} ${n.label}`,
-      color: communityColor.get(n.communityId) ?? "#64748b",
-      val: 2, // Size of the node
-    }));
-    
-    const links = data.edges
-      .filter((edge) => visible.has(edge.source) && visible.has(edge.target))
-      .map((edge) => ({
-        source: edge.source,
-        target: edge.target,
-      }));
-      
-    return { nodes, links };
-  }, [data, filteredNodes, communityColor]);
+  const connectedNodes = nodes.filter((n) => connectedNodeIds.has(n.id));
+  const isolatedNodes = nodes.filter((n) => !connectedNodeIds.has(n.id));
 
-  // Handle smooth zooming when filter changes
-  useEffect(() => {
-    if (fgRef.current && graphData.nodes.length > 0) {
-       setTimeout(() => {
-         if (fgRef.current) fgRef.current.zoomToFit(400, 20);
-       }, 500);
-    }
-  }, [graphClusterFilter, graphData]);
+  connectedNodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: 380, height: 100 });
+  });
 
-  if (error) {
-    return <ErrorState message={(error as Error).message} />;
-  }
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
 
-  if (isLoading) {
-    return <Skeleton className="h-[620px] w-full" />;
-  }
+  dagre.layout(dagreGraph);
 
-  if (!data?.nodes.length) {
-    return (
-      <EmptyState
-        title="No graph data available"
-        description="Endpoint graph nodes and Leiden communities will appear after backend graph construction completes."
-      />
-    );
-  }
+  let maxX = 0;
+  let maxY = 0;
 
-  const activeCommunity = selectedCommunity ??
-    data.communities.find((community) => community.id === graphClusterFilter) ??
-    null;
+  const layoutedConnected = connectedNodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    const x = nodeWithPosition.x - 380 / 2;
+    const y = nodeWithPosition.y - 100 / 2;
+    maxX = Math.max(maxX, x + 380);
+    maxY = Math.max(maxY, y + 100);
+    return {
+      ...node,
+      position: { x, y },
+    };
+  });
 
-  return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-      <Card className="h-[620px] overflow-hidden bg-slate-50 relative">
-        <ForceGraph2D
-          ref={fgRef}
-          graphData={graphData}
-          nodeLabel={(node: any) => {
-            const methodColors: Record<string, string> = {
-              GET: "#10b981", POST: "#3b82f6", PUT: "#f59e0b", DELETE: "#ef4444", PATCH: "#8b5cf6"
-            };
-            const methodBg = methodColors[node.method] || "#64748b";
-            
-            return `
-              <div style="background: rgba(15, 23, 42, 0.95); color: white; padding: 10px 14px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); font-family: Inter, system-ui, sans-serif; font-size: 13px; max-width: 300px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px);">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                  <span style="background: ${methodBg}; color: white; font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">${node.method}</span>
-                  <span style="color: #94a3b8; font-size: 11px; font-weight: 500;">Community ${node.communityId}</span>
-                </div>
-                <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #e2e8f0; word-break: break-all; line-height: 1.4;">
-                  ${node.label}
-                </div>
-              </div>
-            `;
-          }}
-          linkColor={() => "#cbd5e1"}
-          linkDirectionalArrowLength={2}
-          linkDirectionalArrowRelPos={1}
-          d3AlphaDecay={0.02}
-          d3VelocityDecay={0.3}
-          nodeCanvasObject={(node: any, ctx, globalScale) => {
-            const size = 6;
-            
-            // 1. Draw the outer glow/ring (Community Workflow Color)
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, size + 1.5, 0, 2 * Math.PI, false);
-            ctx.fillStyle = node.color; // The Leiden Community color
-            ctx.fill();
+  // Display isolated nodes in a grid below the main DAG to prevent a giant vertical column collapse
+  // Force a reasonable maximum width of columns so fitView doesn't zoom out microscopically
+  const COLUMNS = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(isolatedNodes.length))));
+  const GRID_X_START = 0;
+  const GRID_Y_START = connectedNodes.length > 0 ? maxY + 120 : 0;
+  const NODE_WIDTH = 380;
+  const NODE_HEIGHT = 100;
+  const SPACING_X = 60;
+  const SPACING_Y = 60;
 
-            // 2. HTTP Method Avatar Colors
-            const methodColors: Record<string, string> = {
-              GET: "#10b981",    // Emerald
-              POST: "#3b82f6",   // Blue
-              PUT: "#f59e0b",    // Amber
-              DELETE: "#ef4444", // Red
-              PATCH: "#8b5cf6"   // Violet
-            };
-            const methodBg = methodColors[node.method] || "#64748b";
-            
-            // 3. Draw the inner Avatar circle
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
-            ctx.fillStyle = methodBg;
-            ctx.fill();
+  const layoutedIsolated = isolatedNodes.map((node, index) => {
+    const col = index % COLUMNS;
+    const row = Math.floor(index / COLUMNS);
+    return {
+      ...node,
+      position: {
+        x: GRID_X_START + col * (NODE_WIDTH + SPACING_X),
+        y: GRID_Y_START + row * (NODE_HEIGHT + SPACING_Y),
+      },
+    };
+  });
 
-            // 4. Draw the SVG Path Icon (Only when zoomed in enough)
-            if (globalScale > 1.2) {
-              // Standard 24x24 Material Design Icons
-              const svgPaths: Record<string, string> = {
-                // Download/Arrow Down
-                GET: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
-                // Plus/Add Circle
-                POST: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z",
-                // Refresh/Sync
-                PUT: "M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z",
-                // Pencil/Edit
-                PATCH: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
-                // Trash
-                DELETE: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-              };
-
-              const pathString = svgPaths[node.method] || svgPaths.GET;
-              
-              // Only create Path2D if we are in browser (Path2D exists)
-              if (typeof Path2D !== "undefined") {
-                const iconPath = new Path2D(pathString);
-                
-                const padding = size * 0.4;
-                const iconSize = (size * 2) - (padding * 2);
-                
-                ctx.save();
-                // Move to top-left of the icon box
-                ctx.translate(node.x - iconSize / 2, node.y - iconSize / 2);
-                // Scale the 24x24 SVG path down to our iconSize
-                ctx.scale(iconSize / 24, iconSize / 24);
-                
-                ctx.fillStyle = "#ffffff";
-                ctx.fill(iconPath);
-                ctx.restore();
-              }
-            }
-          }}
-          onNodeClick={(node: any) => {
-             const graphNode = data.nodes.find((entry) => entry.id === node.id) ?? null;
-             setSelectedNode(graphNode);
-             setSelectedCommunity(
-               data.communities.find(
-                 (community) => community.id === graphNode?.communityId,
-               ) ?? null,
-             );
-          }}
-          onEngineStop={() => {
-            if (fgRef.current && !graphClusterFilter) {
-               fgRef.current.zoomToFit(400, 20);
-            }
-          }}
-        />
-        {/* Helper text overlay */}
-        <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-medium text-slate-500 shadow-sm pointer-events-none">
-          Scroll to zoom • Drag background to pan • Drag nodes to interact
-        </div>
-      </Card>
-
-      <div className="space-y-4 max-h-[620px] overflow-y-auto pr-2 custom-scrollbar">
-        {selectedWorkflowId || graphClusterFilter ? (
-          <Card>
-            <CardContent className="space-y-2 pt-4">
-              <h3 className="text-sm font-semibold">Active filter</h3>
-              {selectedWorkflowId ? (
-                <p className="text-xs text-slate-600 break-all">
-                  Workflow selection: <span className="font-mono">{selectedWorkflowId}</span>
-                </p>
-              ) : null}
-              {graphClusterFilter ? (
-                <p className="text-xs text-slate-600 break-all">
-                  Community: <span className="font-mono">{graphClusterFilter}</span>
-                </p>
-              ) : null}
-              <Button
-                onClick={() => setGraphClusterFilter(null)}
-                size="sm"
-                variant="secondary"
-                className="w-full"
-              >
-                Clear filter
-              </Button>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {selectedNode ? (
-          <Card>
-            <CardContent className="space-y-2 pt-4">
-              <h3 className="text-sm font-semibold">Endpoint inspection</h3>
-              <p className="font-mono text-xs text-slate-700 break-all">
-                <span className="font-bold text-slate-900">{selectedNode.method}</span> {selectedNode.label}
-              </p>
-              <Badge tone="neutral" className="block w-fit">Community {selectedNode.communityId}</Badge>
-              {activeCommunity ? (
-                <p className="text-xs text-slate-600">
-                  Cluster: {activeCommunity.workflowName} ({activeCommunity.size} endpoints)
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
-        ) : null}
-
-        <Card>
-          <CardContent className="space-y-3 pt-4">
-            <div className="flex items-center justify-between sticky top-0 bg-white z-10 pb-2">
-              <h3 className="text-sm font-semibold">Leiden Communities</h3>
-              <Button
-                onClick={() => {
-                  setGraphClusterFilter(null);
-                  setSelectedCommunity(null);
-                }}
-                size="sm"
-                variant="secondary"
-              >
-                Clear All
-              </Button>
-            </div>
-            {data.communities.map((community) => (
-              <button
-                className={`w-full rounded-md border p-3 text-left transition-colors ${
-                  graphClusterFilter === community.id 
-                    ? "bg-slate-100 border-slate-300" 
-                    : "border-slate-200 hover:bg-slate-50"
-                }`}
-                key={community.id}
-                onClick={() => {
-                  setGraphClusterFilter(community.id);
-                  setSelectedCommunity(community);
-                  setSelectedNode(null);
-                }}
-                type="button"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium line-clamp-2">{community.workflowName}</span>
-                  <span
-                    aria-hidden="true"
-                    className="h-3 w-3 rounded-full shrink-0"
-                    style={{
-                      backgroundColor: communityColor.get(community.id) ?? "#64748b",
-                    }}
-                  />
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <Badge tone="neutral">{community.size} endpoints</Badge>
-                  {community.confidence ? (
-                    <Badge tone="default">
-                      {Math.round(community.confidence * 100)}%
-                    </Badge>
-                  ) : null}
-                </div>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
+  return { nodes: [...layoutedConnected, ...layoutedIsolated], edges };
+};
 
 export function OpenApiGraph() {
-  return <GraphCanvas />;
+  const { data, isLoading, error } = useGraph();
+  const { graphClusterFilter, selectedWorkflowId, setGraphClusterFilter } = useReviewStore();
+  const [selectedNodeData, setSelectedNodeData] = useState<GraphNode | GraphCommunity | null>(null);
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+
+  useEffect(() => {
+    if (!data) return;
+
+    let initialNodes: Node[] = [];
+    let initialEdges: Edge[] = [];
+
+    if (!graphClusterFilter) {
+      initialNodes = data.communities.map((comm) => ({
+        id: `comm-${comm.id}`,
+        type: "void",
+        position: { x: 0, y: 0 },
+        data: {
+          label: comm.workflowName,
+          isCommunityNode: true,
+          communitySize: comm.size,
+          rawCommunity: comm,
+        },
+      }));
+
+      const commEdges = new Set<string>();
+      data.edges.forEach((e) => {
+        const sourceNode = data.nodes.find(n => n.id === e.source);
+        const targetNode = data.nodes.find(n => n.id === e.target);
+        if (sourceNode && targetNode && sourceNode.communityId !== targetNode.communityId) {
+          const edgeId = `comm-${sourceNode.communityId}->comm-${targetNode.communityId}`;
+          if (!commEdges.has(edgeId)) {
+            commEdges.add(edgeId);
+            initialEdges.push({
+              id: edgeId,
+              source: `comm-${sourceNode.communityId}`,
+              target: `comm-${targetNode.communityId}`,
+              type: "void",
+              animated: true,
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 15,
+                height: 15,
+                color: '#94a3b8',
+              },
+            });
+          }
+        }
+      });
+    } else {
+      const filteredEndpoints = data.nodes.filter(n => n.communityId === graphClusterFilter);
+      const visibleIds = new Set(filteredEndpoints.map(n => n.id));
+      
+      initialNodes = filteredEndpoints.map((n) => ({
+        id: n.id,
+        type: "void",
+        position: { x: 0, y: 0 },
+        data: {
+          label: n.label,
+          method: n.method,
+          rawNode: n,
+        },
+      }));
+
+      const edgeMap = new Map<string, Edge>();
+      data.edges
+        .filter(e => visibleIds.has(e.source) && visibleIds.has(e.target))
+        .forEach(e => {
+          const edgeId = `${e.source}-${e.target}`;
+          if (!edgeMap.has(edgeId)) {
+            edgeMap.set(edgeId, {
+              id: edgeId,
+              source: e.source,
+              target: e.target,
+              type: "void",
+              label: (e as any).type || "Calls",
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 15,
+                height: 15,
+                color: '#cbd5e1',
+              },
+            });
+          } else {
+             const existing = edgeMap.get(edgeId)!;
+             const newLabel = (e as any).type || "Calls";
+             if (existing.label && !String(existing.label).includes(newLabel)) {
+                existing.label = `${existing.label}, ${newLabel}`;
+             }
+          }
+        });
+      initialEdges = Array.from(edgeMap.values());
+    }
+
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+    setSelectedNodeData(null);
+    
+    if (rfInstance) {
+      setTimeout(() => {
+        rfInstance.fitView({ padding: 0.4, duration: 800, maxZoom: 1, minZoom: 0.65 });
+      }, 50);
+    }
+  }, [data, graphClusterFilter, rfInstance]);
+
+  const onNodeClick = (_: React.MouseEvent, node: Node) => {
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === node.id })));
+    if (node.data.isCommunityNode) {
+      const comm = node.data.rawCommunity as GraphCommunity;
+      setSelectedNodeData(comm);
+      setGraphClusterFilter(comm.id);
+    } else {
+      setSelectedNodeData(node.data.rawNode as GraphNode);
+    }
+  };
+
+  const onPaneClick = () => {
+    setSelectedNodeData(null);
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+  };
+
+  if (error) return <ErrorState message={(error as Error).message} />;
+  if (isLoading) return <Skeleton className="h-[620px] w-full bg-gray-50" />;
+  if (!data?.nodes.length) {
+    return <EmptyState title="No graph data available" description="Endpoints will appear after backend processing." />;
+  }
+
+  const isCommunityView = !graphClusterFilter;
+
+  return (
+    <div className="mcp-sandbox h-[750px] w-full flex border border-gray-200 rounded-md overflow-hidden text-gray-900">
+      
+      {/* Pane 1: Left Sidebar (Tree View) */}
+      <div className={`flex-shrink-0 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${isLeftSidebarOpen ? 'w-[260px]' : 'w-0 border-r-0 hidden'}`}>
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <TreeStructure size={20} weight="duotone" className="text-gray-500" />
+            <h2 className="text-sm font-semibold tracking-wide">Ingested APIs</h2>
+          </div>
+          <button onClick={() => setIsLeftSidebarOpen(false)} className="text-gray-400 hover:text-gray-700">
+             <CaretLeft size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
+          {data.communities.map(comm => (
+            <div key={comm.id} className="group">
+              <button 
+                onClick={() => {
+                  if (graphClusterFilter === comm.id) {
+                    setGraphClusterFilter(null);
+                  } else {
+                    setGraphClusterFilter(comm.id);
+                    setSelectedNodeData(comm);
+                  }
+                }}
+                className={`w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-['JetBrains_Mono'] transition-colors ${
+                  graphClusterFilter === comm.id ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                <CaretRight size={14} className={graphClusterFilter === comm.id ? "rotate-90" : ""} />
+                <span className="truncate">{comm.workflowName}</span>
+              </button>
+              {graphClusterFilter === comm.id && (
+                <div className="ml-5 mt-1 space-y-1 border-l border-gray-200 pl-2">
+                  {data.nodes.filter(n => n.communityId === comm.id).map(n => (
+                    <button 
+                      key={n.id} 
+                      onClick={() => {
+                        setNodes((nds) => nds.map((node) => ({ ...node, selected: node.id === n.id })));
+                        setSelectedNodeData(n);
+                        
+                        if (rfInstance) {
+                          const rfNode = rfInstance.getNode(n.id);
+                          if (rfNode) {
+                            const { x, y } = rfNode.position;
+                            rfInstance.setCenter(x + 190, y + 50, { zoom: 1, duration: 800 });
+                          }
+                        }
+                      }}
+                      className={`w-full flex items-center text-left gap-2 px-2 py-1.5 text-[10px] font-['JetBrains_Mono'] transition-colors cursor-pointer ${
+                        selectedNodeData && "id" in selectedNodeData && selectedNodeData.id === n.id ? "bg-gray-100 text-gray-900 font-semibold border-l-2 border-blue-500 -ml-[2px]" : "text-gray-500 hover:text-gray-900"
+                      }`}
+                    >
+                      <ListDashes size={12} weight="duotone" className="shrink-0" />
+                      <span className="truncate">{n.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pane 2: Central Canvas */}
+      <div className="flex-1 relative bg-gray-50 h-full w-full">
+        {/* Top left overlay for canvas context & Sidebar Toggles */}
+        <div className="absolute top-4 left-4 z-10 flex gap-2 items-center">
+          {!isLeftSidebarOpen && (
+            <button 
+               onClick={() => setIsLeftSidebarOpen(true)}
+               className="bg-white border border-gray-200 p-2 rounded-sm shadow-md hover:bg-gray-50 text-gray-500 hover:text-gray-800 transition-colors"
+               title="Open Ingested APIs"
+            >
+              <SidebarSimple size={16} />
+            </button>
+          )}
+          <div className="bg-white border border-gray-200 px-3 py-1.5 rounded-sm flex items-center gap-2 shadow-xl">
+          {isCommunityView ? (
+             <span className="text-xs font-['JetBrains_Mono'] text-gray-500">GLOBAL / CLUSTER TOPOLOGY</span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={() => setGraphClusterFilter(null)} className="text-gray-500 hover:text-gray-900 text-xs font-['JetBrains_Mono']">
+                 [ BACK ]
+              </button>
+              <span className="text-xs font-['JetBrains_Mono'] text-blue-600">/ {graphClusterFilter}</span>
+            </div>
+          )}
+          </div>
+        </div>
+
+        {/* Top right overlay for Right Sidebar Toggle */}
+        <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
+          {!isRightSidebarOpen && (
+            <button 
+               onClick={() => setIsRightSidebarOpen(true)}
+               className="bg-white border border-gray-200 p-2 rounded-sm shadow-md hover:bg-gray-50 text-gray-500 hover:text-gray-800 transition-colors"
+               title="Open Context Budget Inspector"
+            >
+              <SidebarSimple size={16} />
+            </button>
+          )}
+        </div>
+
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
+          onInit={setRfInstance}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.4, maxZoom: 1, minZoom: 0.65 }}
+          minZoom={0.1}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background color="#E2E8F0" gap={20} size={2} />
+          <Controls className="bg-white border border-gray-200 fill-gray-500 shadow-xl" />
+        </ReactFlow>
+      </div>
+
+      {/* Pane 3: Context Budget Inspector */}
+      <div className={`flex-shrink-0 bg-white border-l border-gray-200 flex flex-col transition-all duration-300 ${isRightSidebarOpen ? 'w-[320px]' : 'w-0 border-l-0 hidden'}`}>
+         <div className="p-4 border-b border-gray-200 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <TerminalWindow size={20} weight="duotone" className="text-blue-600" />
+            <h2 className="text-sm font-semibold tracking-wide">Context Inspector</h2>
+          </div>
+          <button onClick={() => setIsRightSidebarOpen(false)} className="text-gray-400 hover:text-gray-700">
+             <CaretRight size={16} />
+          </button>
+        </div>
+        
+        <div className="flex-1 p-4 overflow-y-auto space-y-6">
+          {!selectedNodeData ? (
+             <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-3 opacity-50">
+               <Desktop size={48} weight="duotone" />
+               <p className="text-xs font-['JetBrains_Mono']">NO_TARGET_ACQUIRED</p>
+             </div>
+          ) : (
+            <>
+              {/* Target Identity */}
+              <div className="space-y-2">
+                 <div className="text-[10px] text-blue-600 font-['JetBrains_Mono'] uppercase tracking-widest">Target Identity</div>
+                 <div className="p-3 bg-gray-50 border border-gray-200 rounded-sm font-['JetBrains_Mono'] text-xs break-all">
+                    {"workflowName" in selectedNodeData ? selectedNodeData.workflowName : selectedNodeData.label}
+                 </div>
+              </div>
+
+              {/* Resource Metrics */}
+              <div className="space-y-2">
+                 <div className="text-[10px] text-gray-500 font-['JetBrains_Mono'] uppercase tracking-widest">Resource Footprint</div>
+                 <div className="grid grid-cols-2 gap-2">
+                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-sm flex flex-col gap-1">
+                      <div className="text-[10px] text-gray-500 flex items-center gap-1"><Coins size={12}/> Tokens</div>
+                      <div className="text-sm font-['JetBrains_Mono'] text-gray-900">
+                        {"workflowName" in selectedNodeData ? (selectedNodeData.size * 142) : Math.floor(Math.random() * 500 + 100)}
+                      </div>
+                   </div>
+                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-sm flex flex-col gap-1">
+                      <div className="text-[10px] text-gray-500 flex items-center gap-1"><Graph size={12}/> Weight</div>
+                      <div className="text-sm font-['JetBrains_Mono'] text-gray-900">
+                        {"workflowName" in selectedNodeData ? `${selectedNodeData.size} Nodes` : 'O(1)'}
+                      </div>
+                   </div>
+                 </div>
+              </div>
+
+              {/* Console Output Mock */}
+              <div className="space-y-2 pt-4">
+                 <div className="text-[10px] text-gray-500 font-['JetBrains_Mono'] uppercase tracking-widest">Inspector Log</div>
+                 <div className="p-3 bg-gray-100 border border-gray-200 rounded-sm font-['JetBrains_Mono'] text-[10px] text-gray-800 leading-relaxed opacity-80 h-32 overflow-y-auto">
+                    {`> INIT_INSPECTOR()\n`}
+                    {`> TARGET_ID: ${selectedNodeData.id}\n`}
+                    {"workflowName" in selectedNodeData ? 
+                      `> RESOLVING_CLUSTER...\n> FOUND ${selectedNodeData.size} ENDPOINTS\n> CALCULATING_BUDGET...\n> STATUS: OK` : 
+                      `> METHOD: ${selectedNodeData.method}\n> COMMUNITY_BINDING: ${selectedNodeData.communityId}\n> ESTIMATING_TOKENS...\n> STATUS: OK`}
+                 </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+    </div>
+  );
 }

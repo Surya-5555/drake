@@ -1,17 +1,31 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Caveat:wght@600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --background: 248 250 252;
-  --foreground: 15 23 42;
-  --muted: 241 245 249;
-  --muted-foreground: 71 85 105;
-  --border: 203 213 225;
+  --background: 247 248 250; /* Base page bg */
+  --foreground: 26 29 31;
+  --muted: 239 239 239;
+  --muted-foreground: 111 118 126;
+  --border: 239 239 239;
   --card: 255 255 255;
-  --primary: 8 88 164;
-  --primary-foreground: 255 255 255;
-  --destructive: 185 28 28;
-  --success: 22 101 52;
-  --warning: 180 83 9;
+  --primary: 189 229 108;
+  --primary-foreground: 26 29 31;
+  
+  /* Industrial Void Theme Variables */
+  --bg-abyss: 5 5 5;
+  --bg-panel: 10 10 12;
+  --bg-surface: 18 18 20;
+  --accent-glow: 0 240 255; /* Neon Cyan */
+  --accent-glow-dim: rgba(0, 240, 255, 0.15);
+  --text-primary: 244 244 245;
+  --text-muted: 161 161 170;
+  --border-void: 39 39 42;
+}
+
+.mcp-sandbox {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  font-family: 'Inter', sans-serif;
 }
 
 * {
@@ -22,11 +36,13 @@ body {
   margin: 0;
   background: rgb(var(--background));
   color: rgb(var(--foreground));
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .react-flow__node {
-  border-radius: 6px;
+  border-radius: 0px;
   border: 1px solid rgb(var(--border));
   background: rgb(var(--card));
   color: rgb(var(--foreground));
@@ -34,6 +50,12 @@ body {
 }
 
 .react-flow__controls-button {
-  border-color: rgb(var(--border));
+  border-color: rgb(var(--border)) !important;
+  background-color: rgb(var(--card)) !important;
+  fill: rgb(var(--foreground)) !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: rgb(var(--muted)) !important;
 }
 
