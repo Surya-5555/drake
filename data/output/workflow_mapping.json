@@ -1,8 +1,1360 @@
 {
   "workflows": {
-    "test_workflow_one": {
-      "name": "test_workflow_one",
-      "description": "A test workflow description",
+    "dell_f_c_management": {
+      "name": "dell_f_c_management",
+      "description": "Observability layer for Dell F C Management. Configured with 15 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFC/{FCId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFC/{FCId}",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFCCapabilities/{FCCapabilitiesId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFCCapabilities/{FCCapabilitiesId}",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFCPortMetrics/{FCPortMetricsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFCPortMetrics/{FCPortMetricsId}",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFCStatistics/{FCStatisticsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFCStatistics/{FCStatisticsId}",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellFC/{FCId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellFC/{FCId}",
+          "params": {}
+        },
+        {
+          "step_id": 6,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellFCCapabilities/{FCCapabilitiesId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellFCCapabilities/{FCCapabilitiesId}",
+          "params": {}
+        },
+        {
+          "step_id": 7,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellFCPortMetrics/{FCPortMetricsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellFCPortMetrics/{FCPortMetricsId}",
+          "params": {}
+        },
+        {
+          "step_id": 8,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellFCStatistics/{FCStatisticsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellFCStatistics/{FCStatisticsId}",
+          "params": {}
+        },
+        {
+          "step_id": 9,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellInfiniBand/{InfiniBandId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellInfiniBand/{InfiniBandId}",
+          "params": {}
+        },
+        {
+          "step_id": 10,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellInfiniBandCapabilities/{InfiniBandCapabilitiesId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellInfiniBandCapabilities/{InfiniBandCapabilitiesId}",
+          "params": {}
+        },
+        {
+          "step_id": 11,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellInfiniBandPortMetrics/{InfiniBandPortMetricsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellInfiniBandPortMetrics/{InfiniBandPortMetricsId}",
+          "params": {}
+        },
+        {
+          "step_id": 12,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellNIC/{NICId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellNIC/{NICId}",
+          "params": {}
+        },
+        {
+          "step_id": 13,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellNICCapabilities/{NICCapabilitiesId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellNICCapabilities/{NICCapabilitiesId}",
+          "params": {}
+        },
+        {
+          "step_id": 14,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellNICPortMetrics/{NICPortMetricsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellNICPortMetrics/{NICPortMetricsId}",
+          "params": {}
+        },
+        {
+          "step_id": 15,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellNICStatistics/{NICStatisticsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/{NetworkDeviceId}/Oem/Dell/DellNICStatistics/{NICStatisticsId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_assembly_collection_management": {
+      "name": "dell_assembly_collection_management",
+      "description": "Observability layer for Dell Assembly Collection Management. Configured with 8 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellAssembly",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellAssembly",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellChassis",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellChassis",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellControllerBattery",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellControllerBattery",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellControllerBattery/{ControllerBatteryId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellControllerBattery/{ControllerBatteryId}",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosureFanSensors",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosureFanSensors",
+          "params": {}
+        },
+        {
+          "step_id": 6,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosurePowerSupply",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosurePowerSupply",
+          "params": {}
+        },
+        {
+          "step_id": 7,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosurePowerSupply/{EnclosurePowerSupplyId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosurePowerSupply/{EnclosurePowerSupplyId}",
+          "params": {}
+        },
+        {
+          "step_id": 8,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosureTemperatureSensors",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosureTemperatureSensors",
+          "params": {}
+        }
+      ]
+    },
+    "dell_infini_band_management": {
+      "name": "dell_infini_band_management",
+      "description": "Observability layer for Dell Infini Band Management. Configured with 7 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBand/{InfiniBandId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBand/{InfiniBandId}",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBandCapabilities/{InfiniBandCapabilitiesId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBandCapabilities/{InfiniBandCapabilitiesId}",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBandPortMetrics/{InfiniBandPortMetricsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBandPortMetrics/{InfiniBandPortMetricsId}",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellNIC/{NICId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellNIC/{NICId}",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellNICCapabilities/{NICCapabilitiesId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellNICCapabilities/{NICCapabilitiesId}",
+          "params": {}
+        },
+        {
+          "step_id": 6,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellNICPortMetrics/{NICPortMetricsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellNICPortMetrics/{NICPortMetricsId}",
+          "params": {}
+        },
+        {
+          "step_id": 7,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellNICStatistics/{NICStatisticsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellNICStatistics/{NICStatisticsId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_controller_management": {
+      "name": "dell_controller_management",
+      "description": "Observability layer for Dell Controller Management. Configured with 5 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/Oem/Dell/DellControllers",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/Oem/Dell/DellControllers",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/Oem/Dell/DellControllers/{ControllerId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/Oem/Dell/DellControllers/{ControllerId}",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/Oem/Dell/DellPCIeSSDExtenders",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/Oem/Dell/DellPCIeSSDExtenders",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Oem/Dell/DellControllerBattery/{ControllerBatteryId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Oem/Dell/DellControllerBattery/{ControllerBatteryId}",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Oem/Dell/DellControllers/{ControllerId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Oem/Dell/DellControllers/{ControllerId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_p_c_ie_s_s_d_management": {
+      "name": "dell_p_c_ie_s_s_d_management",
+      "description": "Observability layer for Dell P C Ie S S D Management. Configured with 5 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/Oem/Dell/DellDrives/{PhysicalDiskId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/Oem/Dell/DellDrives/{PhysicalDiskId}",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/Oem/Dell/DellPCIeSSDs/{PCIeSSDId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/Oem/Dell/DellPCIeSSDs/{PCIeSSDId}",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/{DriveId}/Oem/Dell/DellDriveSMARTAttributes",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/{DriveId}/Oem/Dell/DellDriveSMARTAttributes",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/{DriveId}/Oem/Dell/DellDrives/{PhysicalDiskId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/{DriveId}/Oem/Dell/DellDrives/{PhysicalDiskId}",
+          "params": {}
+        },
+        {
+          "step_id": 5,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/{DriveId}/Oem/Dell/DellPCIeSSDs/{PCIeSSDId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/{DriveId}/Oem/Dell/DellPCIeSSDs/{PCIeSSDId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_enclosure_management": {
+      "name": "dell_enclosure_management",
+      "description": "Observability layer for Dell Enclosure Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{EnclosureId}/Oem/Dell/DellEnclosures/{EnclosureId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{EnclosureId}/Oem/Dell/DellEnclosures/{EnclosureId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_infini_band_capabilities_collection_management": {
+      "name": "dell_infini_band_capabilities_collection_management",
+      "description": "Observability layer for Dell Infini Band Capabilities Collection Management. Configured with 4 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBand",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBand",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBandCapabilities",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellInfiniBandCapabilities",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellNIC",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellNIC",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellNICCapabilities",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellNICCapabilities",
+          "params": {}
+        }
+      ]
+    },
+    "heater_management": {
+      "name": "heater_management",
+      "description": "Observability layer for Heater Management. Configured with 4 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Heaters",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Heaters",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Heaters/{HeaterId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Heaters/{HeaterId}",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/ThermalMetrics",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/ThermalMetrics",
+          "params": {}
+        }
+      ]
+    },
+    "message_registry_management": {
+      "name": "message_registry_management",
+      "description": "Observability layer for Message Registry Management. Configured with 4 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Registries",
+          "method": "GET",
+          "url": "/redfish/v1/Registries",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Registries/BaseMessages/BaseRegistry.json",
+          "method": "GET",
+          "url": "/redfish/v1/Registries/BaseMessages/BaseRegistry.json",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Registries/Messages/EEMIRegistry",
+          "method": "GET",
+          "url": "/redfish/v1/Registries/Messages/EEMIRegistry",
+          "params": {}
+        },
+        {
+          "step_id": 4,
+          "name": "GET_/redfish/v1/Registries/{MessageRegistryFileId}",
+          "method": "GET",
+          "url": "/redfish/v1/Registries/{MessageRegistryFileId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_accelerator_management": {
+      "name": "dell_accelerator_management",
+      "description": "Observability layer for Dell Accelerator Management. Configured with 3 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Processors/Oem/Dell/DellAccelerators",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Processors/Oem/Dell/DellAccelerators",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Processors/Oem/Dell/DellAccelerators/{AcceleratorId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Processors/Oem/Dell/DellAccelerators/{AcceleratorId}",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/FPGA/Oem/Dell/DellAccelerators/{AcceleratorId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/FPGA/Oem/Dell/DellAccelerators/{AcceleratorId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_power_supply_collection_management": {
+      "name": "dell_power_supply_collection_management",
+      "description": "Observability layer for Dell Power Supply Collection Management. Configured with 3 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Power/Oem/Dell/DellPowerSupply",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Power/Oem/Dell/DellPowerSupply",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Power/Oem/Dell/DellPowerSupplyInventory",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Power/Oem/Dell/DellPowerSupplyInventory",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Power/Oem/Dell/DellPowerSupplyInventory/{PowerSupplyViewId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Power/Oem/Dell/DellPowerSupplyInventory/{PowerSupplyViewId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_memory_management": {
+      "name": "dell_memory_management",
+      "description": "Observability layer for Dell Memory Management. Configured with 3 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Memory/Oem/Dell/DellMemory",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Memory/Oem/Dell/DellMemory",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Memory/Oem/Dell/DellMemory/{MemoryId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Memory/Oem/Dell/DellMemory/{MemoryId}",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Memory/{MemoryId}/Oem/Dell/DellMemory/{MemoryId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Memory/{MemoryId}/Oem/Dell/DellMemory/{MemoryId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_infini_band_port_metrics_collection_management": {
+      "name": "dell_infini_band_port_metrics_collection_management",
+      "description": "Observability layer for Dell Infini Band Port Metrics Collection Management. Configured with 3 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkDeviceFunctions/Oem/Dell/DellInfiniBandPortMetrics",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkDeviceFunctions/Oem/Dell/DellInfiniBandPortMetrics",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkDeviceFunctions/Oem/Dell/DellNICPortMetrics",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkDeviceFunctions/Oem/Dell/DellNICPortMetrics",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkDeviceFunctions/Oem/Dell/DellNICStatistics",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkDeviceFunctions/Oem/Dell/DellNICStatistics",
+          "params": {}
+        }
+      ]
+    },
+    "dell_processor_management": {
+      "name": "dell_processor_management",
+      "description": "Observability layer for Dell Processor Management. Configured with 3 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Processors/Oem/Dell/DellProcessors",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Processors/Oem/Dell/DellProcessors",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Processors/Oem/Dell/DellProcessors/{ProcessorId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Processors/Oem/Dell/DellProcessors/{ProcessorId}",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/Oem/Dell/DellProcessors/{ProcessorId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/Oem/Dell/DellProcessors/{ProcessorId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_f_c_capabilities_collection_management": {
+      "name": "dell_f_c_capabilities_collection_management",
+      "description": "Observability layer for Dell F C Capabilities Collection Management. Configured with 3 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellFCCapabilities",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellFCCapabilities",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellFCPortMetrics",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellFCPortMetrics",
+          "params": {}
+        },
+        {
+          "step_id": 3,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellFCStatistics",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkDeviceFunctions/Oem/Dell/DellFCStatistics",
+          "params": {}
+        }
+      ]
+    },
+    "dell_rollup_status_management": {
+      "name": "dell_rollup_status_management",
+      "description": "Observability layer for Dell Rollup Status Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRollupStatus",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRollupStatus",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRollupStatus/{RollupStatusId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellRollupStatus/{RollupStatusId}",
+          "params": {}
+        }
+      ]
+    },
+    "json_schema_file_management": {
+      "name": "json_schema_file_management",
+      "description": "Observability layer for Json Schema File Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/JsonSchemas",
+          "method": "GET",
+          "url": "/redfish/v1/JsonSchemas",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/JsonSchemas/{JsonSchemaFileId}",
+          "method": "GET",
+          "url": "/redfish/v1/JsonSchemas/{JsonSchemaFileId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_p_c_ie_s_s_d_collection_management": {
+      "name": "dell_p_c_ie_s_s_d_collection_management",
+      "description": "Observability layer for Dell P C Ie S S D Collection Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/Drives/Oem/Dell/DellDrives",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/Drives/Oem/Dell/DellDrives",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/Drives/Oem/Dell/DellPCIeSSDs",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/Drives/Oem/Dell/DellPCIeSSDs",
+          "params": {}
+        }
+      ]
+    },
+    "dell_network_transceiver_management": {
+      "name": "dell_network_transceiver_management",
+      "description": "Observability layer for Dell Network Transceiver Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkPorts/{NetworkPortId}/Oem/Dell/DellNetworkTransceiverPortMetrics/{NetworkTransceiverPortMetricsId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkPorts/{NetworkPortId}/Oem/Dell/DellNetworkTransceiverPortMetrics/{NetworkTransceiverPortMetricsId}",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkPorts/{NetworkPortId}/Oem/Dell/DellNetworkTransceivers/{NetworkTransceiverId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkPorts/{NetworkPortId}/Oem/Dell/DellNetworkTransceivers/{NetworkTransceiverId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_virtual_disk_management": {
+      "name": "dell_virtual_disk_management",
+      "description": "Observability layer for Dell Virtual Disk Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Volumes/Oem/Dell/DellVolumes/{VirtualDiskId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Volumes/Oem/Dell/DellVolumes/{VirtualDiskId}",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Volumes/{VolumeId}/Oem/Dell/DellVolumes/{VirtualDiskId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Volumes/{VolumeId}/Oem/Dell/DellVolumes/{VirtualDiskId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_switch_connection_management": {
+      "name": "dell_switch_connection_management",
+      "description": "Observability layer for Dell Switch Connection Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkPorts/Oem/Dell/DellSwitchConnections",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkPorts/Oem/Dell/DellSwitchConnections",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkPorts/Oem/Dell/DellSwitchConnections/{SwitchConnectionId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkPorts/Oem/Dell/DellSwitchConnections/{SwitchConnectionId}",
+          "params": {}
+        }
+      ]
+    },
+    "thermal_management": {
+      "name": "thermal_management",
+      "description": "Observability layer for Thermal Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/Thermal",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/Thermal",
+          "params": {}
+        }
+      ]
+    },
+    "dell_p_c_ie_s_s_d_back_plane_management": {
+      "name": "dell_p_c_ie_s_s_d_back_plane_management",
+      "description": "Observability layer for Dell P C Ie S S D Back Plane Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{EnclosureId}/Oem/Dell/DellPCIeSSDBackPlanes/{PCIeSSDBackPlaneId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{EnclosureId}/Oem/Dell/DellPCIeSSDBackPlanes/{PCIeSSDBackPlaneId}",
+          "params": {}
+        }
+      ]
+    },
+    "battery_collection_management": {
+      "name": "battery_collection_management",
+      "description": "Observability layer for Battery Collection Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/PowerSubsystem/Batteries",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/PowerSubsystem/Batteries",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/PowerSubsystem/Batteries/{BatteryId}/Metrics",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/PowerSubsystem/Batteries/{BatteryId}/Metrics",
+          "params": {}
+        }
+      ]
+    },
+    "fan_management": {
+      "name": "fan_management",
+      "description": "Observability layer for Fan Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Fans",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Fans",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Fans/{FanId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/ThermalSubsystem/Fans/{FanId}",
+          "params": {}
+        }
+      ]
+    },
+    "component_integrity_management": {
+      "name": "component_integrity_management",
+      "description": "Observability layer for Component Integrity Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/ComponentIntegrity",
+          "method": "GET",
+          "url": "/redfish/v1/ComponentIntegrity",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/ComponentIntegrity/{ComponentIntegrityId}",
+          "method": "GET",
+          "url": "/redfish/v1/ComponentIntegrity/{ComponentIntegrityId}",
+          "params": {}
+        }
+      ]
+    },
+    "ethernet_interface_management": {
+      "name": "ethernet_interface_management",
+      "description": "Observability layer for Ethernet Interface Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/EthernetInterfaces",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/EthernetInterfaces",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/EthernetInterfaces/{EthernetInterfaceId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/EthernetInterfaces/{EthernetInterfaceId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_network_transceiver_collection_management": {
+      "name": "dell_network_transceiver_collection_management",
+      "description": "Observability layer for Dell Network Transceiver Collection Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkPorts/Oem/Dell/DellNetworkTransceiverPortMetrics",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkPorts/Oem/Dell/DellNetworkTransceiverPortMetrics",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkPorts/Oem/Dell/DellNetworkTransceivers",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkAdapters/NetworkPorts/Oem/Dell/DellNetworkTransceivers",
+          "params": {}
+        }
+      ]
+    },
+    "network_interface_management": {
+      "name": "network_interface_management",
+      "description": "Observability layer for Network Interface Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkInterfaces",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkInterfaces",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/NetworkInterfaces/{NetworkInterfaceId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/NetworkInterfaces/{NetworkInterfaceId}",
+          "params": {}
+        }
+      ]
+    },
+    "power_management": {
+      "name": "power_management",
+      "description": "Observability layer for Power Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/FPGA/Oem/Dell/PowerMetrics",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/FPGA/Oem/Dell/PowerMetrics",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/Oem/Dell/PowerMetrics",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Processors/{ProcessorId}/Oem/Dell/PowerMetrics",
+          "params": {}
+        }
+      ]
+    },
+    "dell_firmware_image_hash_management": {
+      "name": "dell_firmware_image_hash_management",
+      "description": "Observability layer for Dell Firmware Image Hash Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/SecureBoot/Oem/Dell/FirmwareImageHashes",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/SecureBoot/Oem/Dell/FirmwareImageHashes",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/SecureBoot/Oem/Dell/FirmwareImageHashes/{FirmwareImageHashId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/SecureBoot/Oem/Dell/FirmwareImageHashes/{FirmwareImageHashId}",
+          "params": {}
+        }
+      ]
+    },
+    "simple_storage_management": {
+      "name": "simple_storage_management",
+      "description": "Observability layer for Simple Storage Management. Configured with 2 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/SimpleStorage",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/SimpleStorage",
+          "params": {}
+        },
+        {
+          "step_id": 2,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/SimpleStorage/{SimpleStorageId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/SimpleStorage/{SimpleStorageId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_software_inventory_management": {
+      "name": "dell_software_inventory_management",
+      "description": "Observability layer for Dell Software Inventory Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/UpdateService/FirmwareInventory/{InventoryId}/Oem/Dell/DellSoftwareInventory/{SoftwareInventoryId}",
+          "method": "GET",
+          "url": "/redfish/v1/UpdateService/FirmwareInventory/{InventoryId}/Oem/Dell/DellSoftwareInventory/{SoftwareInventoryId}",
+          "params": {}
+        }
+      ]
+    },
+    "service_root_management": {
+      "name": "service_root_management",
+      "description": "Observability layer for Service Root Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1",
+          "method": "GET",
+          "url": "/redfish/v1",
+          "params": {}
+        }
+      ]
+    },
+    "network_port_management": {
+      "name": "network_port_management",
+      "description": "Observability layer for Network Port Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/NetworkAdapters/{NetworkAdapterId}/NetworkPorts/{NetworkPortId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/NetworkAdapters/{NetworkAdapterId}/NetworkPorts/{NetworkPortId}",
+          "params": {}
+        }
+      ]
+    },
+    "p_c_ie_function_management": {
+      "name": "p_c_ie_function_management",
+      "description": "Observability layer for P C Ie Function Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/PCIeDevices/{PCIeDeviceId}/PCIeFunctions/{PCIeFunctionId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/PCIeDevices/{PCIeDeviceId}/PCIeFunctions/{PCIeFunctionId}",
+          "params": {}
+        }
+      ]
+    },
+    "p_c_ie_slots_management": {
+      "name": "p_c_ie_slots_management",
+      "description": "Observability layer for P C Ie Slots Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/PCIeSlots",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/PCIeSlots",
+          "params": {}
+        }
+      ]
+    },
+    "battery_management": {
+      "name": "battery_management",
+      "description": "Observability layer for Battery Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/PowerSubsystem/Batteries/{BatteryId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/PowerSubsystem/Batteries/{BatteryId}",
+          "params": {}
+        }
+      ]
+    },
+    "power_supply_metrics_management": {
+      "name": "power_supply_metrics_management",
+      "description": "Observability layer for Power Supply Metrics Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/PowerSubsystem/PowerSupplies/{PowerSupplyId}/Metrics",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/PowerSubsystem/PowerSupplies/{PowerSupplyId}/Metrics",
+          "params": {}
+        }
+      ]
+    },
+    "processor_collection_management": {
+      "name": "processor_collection_management",
+      "description": "Observability layer for Processor Collection Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ChassisId}/Processors/{ProcessorId}/SubProcessors",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ChassisId}/Processors/{ProcessorId}/SubProcessors",
+          "params": {}
+        }
+      ]
+    },
+    "dell_f_c_collection_management": {
+      "name": "dell_f_c_collection_management",
+      "description": "Observability layer for Dell F C Collection Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/Oem/Dell/DellFC",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/Oem/Dell/DellFC",
+          "params": {}
+        }
+      ]
+    },
+    "dell_assembly_management": {
+      "name": "dell_assembly_management",
+      "description": "Observability layer for Dell Assembly Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellAssembly/{AssemblyId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellAssembly/{AssemblyId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_chassis_management": {
+      "name": "dell_chassis_management",
+      "description": "Observability layer for Dell Chassis Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellChassis/{ChassisId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellChassis/{ChassisId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_enclosure_fan_sensor_management": {
+      "name": "dell_enclosure_fan_sensor_management",
+      "description": "Observability layer for Dell Enclosure Fan Sensor Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosureFanSensors/{EnclosureFanSensorId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosureFanSensors/{EnclosureFanSensorId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_enclosure_temperature_sensor_management": {
+      "name": "dell_enclosure_temperature_sensor_management",
+      "description": "Observability layer for Dell Enclosure Temperature Sensor Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosureTemperatureSensors/{EnclosureTemperatureSensorId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Oem/Dell/DellEnclosureTemperatureSensors/{EnclosureTemperatureSensorId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_power_supply_management": {
+      "name": "dell_power_supply_management",
+      "description": "Observability layer for Dell Power Supply Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/Power/Oem/Dell/DellPowerSupply/{PowerSupplyId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{ComputerSystemId}/Power/Oem/Dell/DellPowerSupply/{PowerSupplyId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_enclosure_e_m_m_management": {
+      "name": "dell_enclosure_e_m_m_management",
+      "description": "Observability layer for Dell Enclosure E M M Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{EnclosureId}/Oem/Dell/DellEnclosureEMM/{EnclosureEMMId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{EnclosureId}/Oem/Dell/DellEnclosureEMM/{EnclosureEMMId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_enclosure_power_supply_management": {
+      "name": "dell_enclosure_power_supply_management",
+      "description": "Observability layer for Dell Enclosure Power Supply Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Chassis/{EnclosureId}/Power/Oem/Dell/DellEnclosurePowerSupply/{EnclosurePowerSupplyId}",
+          "method": "GET",
+          "url": "/redfish/v1/Chassis/{EnclosureId}/Power/Oem/Dell/DellEnclosurePowerSupply/{EnclosurePowerSupplyId}",
+          "params": {}
+        }
+      ]
+    },
+    "manager_diagnostic_data_management": {
+      "name": "manager_diagnostic_data_management",
+      "description": "Observability layer for Manager Diagnostic Data Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Managers/{ManagerId}/ManagerDiagnosticData",
+          "method": "GET",
+          "url": "/redfish/v1/Managers/{ManagerId}/ManagerDiagnosticData",
+          "params": {}
+        }
+      ]
+    },
+    "dell_opaque_management_data_management": {
+      "name": "dell_opaque_management_data_management",
+      "description": "Observability layer for Dell Opaque Management Data Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellOpaqueManagementData/{OpaqueManagementDataId}",
+          "method": "GET",
+          "url": "/redfish/v1/Managers/{ManagerId}/Oem/Dell/DellOpaqueManagementData/{OpaqueManagementDataId}",
+          "params": {}
+        }
+      ]
+    },
+    "privilege_registry_management": {
+      "name": "privilege_registry_management",
+      "description": "Observability layer for Privilege Registry Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Managers/{ManagerId}/PrivilegeRegistry",
+          "method": "GET",
+          "url": "/redfish/v1/Managers/{ManagerId}/PrivilegeRegistry",
+          "params": {}
+        }
+      ]
+    },
+    "event_management": {
+      "name": "event_management",
+      "description": "Observability layer for Event Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/SSE",
+          "method": "GET",
+          "url": "/redfish/v1/SSE",
+          "params": {}
+        }
+      ]
+    },
+    "attribute_registry_management": {
+      "name": "attribute_registry_management",
+      "description": "Observability layer for Attribute Registry Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Bios/BiosRegistry",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Bios/BiosRegistry",
+          "params": {}
+        }
+      ]
+    },
+    "dell_boot_sources_registry_management": {
+      "name": "dell_boot_sources_registry_management",
+      "description": "Observability layer for Dell Boot Sources Registry Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/BootSources/BootSourcesRegistry",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/BootSources/BootSourcesRegistry",
+          "params": {}
+        }
+      ]
+    },
+    "v_lan_network_interface_management": {
+      "name": "v_lan_network_interface_management",
+      "description": "Observability layer for V Lan Network Interface Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/EthernetInterfaces/{EthernetInterfaceId}/VLANs/{VLanNetworkInterfaceId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/EthernetInterfaces/{EthernetInterfaceId}/VLANs/{VLanNetworkInterfaceId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_g_p_u_sensor_management": {
+      "name": "dell_g_p_u_sensor_management",
+      "description": "Observability layer for Dell G P U Sensor Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellGPUSensors/{GPUSensorId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellGPUSensors/{GPUSensorId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_presence_and_status_sensor_management": {
+      "name": "dell_presence_and_status_sensor_management",
+      "description": "Observability layer for Dell Presence And Status Sensor Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellPresenceAndStatusSensors/{PresenceAndStatusSensorId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellPresenceAndStatusSensors/{PresenceAndStatusSensorId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_sensor_management": {
+      "name": "dell_sensor_management",
+      "description": "Observability layer for Dell Sensor Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellSensors/{SensorId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellSensors/{SensorId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_slot_management": {
+      "name": "dell_slot_management",
+      "description": "Observability layer for Dell Slot Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellSlots/{SlotId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellSlots/{SlotId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_video_network_management": {
+      "name": "dell_video_network_management",
+      "description": "Observability layer for Dell Video Network Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellVideoNetwork/{VideoNetworkId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Oem/Dell/DellVideoNetwork/{VideoNetworkId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_p_c_ie_function_management": {
+      "name": "dell_p_c_ie_function_management",
+      "description": "Observability layer for Dell P C Ie Function Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/PCIeDevices/{PCIeDeviceId}/PCIeFunctions/{PCIeFunctionId}/Oem/Dell/DellPCIeFunctions/{PCIeFunctionId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/PCIeDevices/{PCIeDeviceId}/PCIeFunctions/{PCIeFunctionId}/Oem/Dell/DellPCIeFunctions/{PCIeFunctionId}",
+          "params": {}
+        }
+      ]
+    },
+    "dell_virtual_disk_collection_management": {
+      "name": "dell_virtual_disk_collection_management",
+      "description": "Observability layer for Dell Virtual Disk Collection Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/Volumes/Oem/Dell/DellVolumes",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/Volumes/Oem/Dell/DellVolumes",
+          "params": {}
+        }
+      ]
+    },
+    "dell_n_v_me_s_m_a_r_t_attributes_management": {
+      "name": "dell_n_v_me_s_m_a_r_t_attributes_management",
+      "description": "Observability layer for Dell N V Me S M A R T Attributes Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/{DriveId}/Oem/Dell/DellNVMeSMARTAttributes",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Drives/{DriveId}/Oem/Dell/DellNVMeSMARTAttributes",
+          "params": {}
+        }
+      ]
+    },
+    "dell_p_c_ie_s_s_d_extender_management": {
+      "name": "dell_p_c_ie_s_s_d_extender_management",
+      "description": "Observability layer for Dell P C Ie S S D Extender Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Oem/Dell/DellPCIeSSDExtenders/{PCIeSSDExtenderId}",
+          "method": "GET",
+          "url": "/redfish/v1/Systems/{ComputerSystemId}/Storage/{StorageId}/Oem/Dell/DellPCIeSSDExtenders/{PCIeSSDExtenderId}",
+          "params": {}
+        }
+      ]
+    },
+    "metric_report_collection_management": {
+      "name": "metric_report_collection_management",
+      "description": "Observability layer for Metric Report Collection Management. Configured with 1 underlying endpoints.",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "GET_/redfish/v1/TelemetryService/MetricReports",
+          "method": "GET",
+          "url": "/redfish/v1/TelemetryService/MetricReports",
+          "params": {}
+        }
+      ]
+    },
+    "firmware_update_realtime": {
+      "name": "firmware_update_realtime",
+      "description": "Realtime test workflow with strategy DUAL_BANK",
+      "steps": []
+    },
+    "bios_config_realtime": {
+      "name": "bios_config_realtime",
+      "description": "Realtime test workflow with strategy SCP_SNAPSHOT",
+      "steps": []
+    },
+    "factory_reset_realtime": {
+      "name": "factory_reset_realtime",
+      "description": "Realtime test workflow with strategy NONE",
       "steps": []
     }
   }
