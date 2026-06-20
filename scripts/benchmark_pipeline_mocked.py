@@ -14,7 +14,7 @@ def benchmark():
     total_start = time.perf_counter()
 
     root_dir = Path(__file__).resolve().parent.parent
-    sample_file = root_dir / "data" / "openapi_sample.json"
+    sample_file = root_dir / "tests" / "fixtures" / "openapi-7.xx.yaml"
 
     # 1. Parse Time
     t0 = time.perf_counter()

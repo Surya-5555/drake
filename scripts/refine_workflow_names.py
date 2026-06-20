@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from src.core.database import async_engine, get_db_connection
+from src.core.database import engine, get_db_connection
 from sqlalchemy import text
 
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +20,7 @@ async def refine_workflow_names():
         return
 
     # Using async engine for non-blocking fetch
-    async with async_engine.connect() as conn:
+    async with engine.connect() as conn:
         result = await conn.execute(text("SELECT id, system_name, community_id FROM workflows WHERE approved = 0"))
         pending_workflows = [dict(r) for r in result.mappings()]
 
@@ -29,7 +29,7 @@ async def refine_workflow_names():
         return
 
     # Fetch all endpoints to associate with communities
-    async with async_engine.connect() as conn:
+    async with engine.connect() as conn:
         result = await conn.execute(text("SELECT * FROM endpoints"))
         all_endpoints = [dict(r) for r in result.mappings()]
 
@@ -100,7 +100,7 @@ async def refine_workflow_names():
 
     # Apply updates
     if updates:
-        async with async_engine.begin() as conn:
+        async with engine.begin() as conn:
             for u in updates:
                 await conn.execute(
                     text("""

@@ -156,8 +156,8 @@ def build_relationship_graph(endpoints: List[Dict[str, Any]]) -> nx.Graph:
         p90 = np.percentile(all_scores, 90)
         p95 = np.percentile(all_scores, 95)
         
-        # We cap the threshold between 0.50 and 0.70 to ensure groups form
-        threshold = max(0.50, min(0.70, p85))
+        # We cap the threshold between 0.80 and 0.90 to strictly limit group sizes (Goldilocks Zone)
+        threshold = max(0.80, min(0.90, p90))
     else:
         threshold = 0.50
         p75 = p80 = p85 = p90 = p95 = 0.0
