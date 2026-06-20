@@ -6,29 +6,24 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+class Step(BaseModel):
+    """
+    Pydantic schema representing a single step in a workflow.
+    """
+    id: str = Field(description="Unique identifier for the step (e.g., step_1).")
+    operation_id: str = Field(description="The underlying OpenAPI operation ID.")
+    returned_state_variables: list[str] = Field(
+        default_factory=list,
+        description="Variables returned by this step to be passed as inputs to subsequent steps."
+    )
+
+
 class Workflow(BaseModel):
     """
     Pydantic schema representing a Dell MCP Workflow.
     
     This model includes metadata about the workflow execution parameters and 
     controls for the State-Aware Universal Rollback Architecture.
-    
-    Attributes:
-        id: Unique workflow identifier.
-        system_name: System-friendly name of the workflow.
-        display_name: Human-readable display name.
-        risk_level: Risk classification of the workflow steps.
-        cluster_size: Number of underlying API endpoints grouped in this workflow.
-        confidence: Clustering algorithm confidence score.
-        generated_description: AI-generated description explaining workflow actions.
-        approved: Workflow approval status (0=pending, 1=approved, 2=rejected).
-        rejection_reason: Reason for rejection, if applicable.
-        community_id: Underlying community or cluster ID.
-        supports_rollback: Whether this workflow supports state rollback or firmware reversion.
-        rollback_strategy: The rollback strategy employed for this workflow:
-            - DUAL_BANK: For firmware updates, relying on Dell iDRAC hardware partitions (swaps active boot bank).
-            - SCP_SNAPSHOT: For BIOS/Config changes (restores from a Server Configuration Profile XML snapshot).
-            - NONE: For destructive actions (e.g., Factory Reset) which cannot be reverted.
     """
     model_config = ConfigDict(extra="ignore")
 
@@ -42,6 +37,13 @@ class Workflow(BaseModel):
     approved: int = Field(default=0, description="Workflow approval status (0=pending, 1=approved, 2=rejected).")
     rejection_reason: Optional[str] = Field(None, description="Reason for rejection, if applicable.")
     community_id: Optional[str] = Field(None, description="Underlying community or cluster ID.")
+    
+    # AUDIT1.MD Fix: Multi-step orchestration variables and steps list
+    steps: list[Step] = Field(default_factory=list, description="Ordered steps in this workflow.")
+    returned_state_variables: list[str] = Field(
+        default_factory=list,
+        description="State variables returned/managed by this workflow's steps."
+    )
 
     supports_rollback: bool = Field(
         default=False, 

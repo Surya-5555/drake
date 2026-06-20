@@ -93,6 +93,13 @@ Ensure you have Python 3.10+ and `uv` installed. If you do not have `uv`, instal
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+*AUDIT Fix: Local LLM setup instructions*
+You must also install and start the local LLM engine Ollama and pull/run the Llama3 model:
+```bash
+# Run Ollama with Llama3 model
+ollama run llama3
+```
+
 ### 2. Environment Setup
 Initialize the virtual environment and install all dependencies:
 ```bash
@@ -105,6 +112,10 @@ Copy the template variables file:
 ```bash
 cp .env.example .env
 ```
+
+*AUDIT Fix: Document environment variables*
+Ensure the following variables are defined in your `.env` file:
+* `DELL_MCP_API_KEY`: The API Key used in `src/proxy/api.py` to authenticate proxy calls and administration endpoints.
 
 ---
 

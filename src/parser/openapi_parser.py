@@ -12,8 +12,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def resolve_refs(obj: Any, spec: Dict[str, Any], seen: set = None) -> Any:
-    """Recursively resolves $ref in OpenAPI schema."""
+# Cache of loaded external specs to avoid re-reading files
+external_specs_cache: Dict[str, Any] = {}
+
+def resolve_refs(obj: Any, spec: Dict[str, Any], seen: set = None, root_dir: Path = None) -> Any:
+    """Recursively resolves $ref (both internal and external) in OpenAPI schema."""
+    # AUDIT1.MD Fix: Implement a robust $ref resolver for Redfish OpenAPI specs (recursive, following internal & external references)
     if seen is None:
         seen = set()
     
@@ -25,21 +29,65 @@ def resolve_refs(obj: Any, spec: Dict[str, Any], seen: set = None) -> Any:
                 return {"type": "object", "description": f"Circular reference to {ref}"}
             seen.add(ref)
             
-            if ref.startswith("#/"):
-                parts = ref.split("/")[1:]
-                cur = spec
-                for p in parts:
-                    cur = cur.get(p, {})
-                # Resolve the target as well
-                res = resolve_refs(cur, spec, seen)
+            # Split into file path and internal pointer path
+            if "#" in ref:
+                file_part, pointer_part = ref.split("#", 1)
+            else:
+                file_part, pointer_part = ref, ""
+                
+            pointer_parts = [p for p in pointer_part.split("/") if p]
+            
+            if file_part:
+                # External reference
+                if root_dir is not None:
+                    ext_file_path = root_dir / file_part
+                else:
+                    ext_file_path = Path(file_part)
+                
+                # Normalize path to use as cache key
+                cache_key = str(ext_file_path.resolve())
+                if cache_key in external_specs_cache:
+                    ext_spec = external_specs_cache[cache_key]
+                else:
+                    ext_spec = {}
+                    if ext_file_path.exists():
+                        try:
+                            with open(ext_file_path, "r", encoding="utf-8") as f:
+                                if ext_file_path.suffix.lower() in [".yaml", ".yml"]:
+                                    ext_spec = yaml.safe_load(f)
+                                elif ext_file_path.suffix.lower() == ".json":
+                                    ext_spec = json.load(f)
+                        except Exception as e:
+                            logger.warning(f"Failed to load external ref file {ext_file_path}: {e}")
+                    external_specs_cache[cache_key] = ext_spec
+                
+                # Find the referenced part in the external spec
+                cur = ext_spec
+                for p in pointer_parts:
+                    if isinstance(cur, dict):
+                        cur = cur.get(p, {})
+                    else:
+                        cur = {}
+                
+                # Resolve recursively on the resolved target
+                res = resolve_refs(cur, ext_spec, seen, ext_file_path.parent)
                 seen.remove(ref)
                 return res
             else:
-                return obj  # External refs left as is for now
-        
-        return {k: resolve_refs(v, spec, set(seen)) for k, v in obj.items()}
+                # Internal reference
+                cur = spec
+                for p in pointer_parts:
+                    if isinstance(cur, dict):
+                        cur = cur.get(p, {})
+                    else:
+                        cur = {}
+                res = resolve_refs(cur, spec, seen, root_dir)
+                seen.remove(ref)
+                return res
+                
+        return {k: resolve_refs(v, spec, set(seen), root_dir) for k, v in obj.items()}
     elif isinstance(obj, list):
-        return [resolve_refs(i, spec, set(seen)) for i in obj]
+        return [resolve_refs(i, spec, set(seen), root_dir) for i in obj]
     return obj
 
 
@@ -72,23 +120,16 @@ class OpenAPIParser:
 
     def _resolve_refs(self, schema: Any, root_spec: Dict[str, Any], depth: int = 0) -> Any:
         """Recursively resolves OpenAPI $ref pointers and merges allOf/oneOf/anyOf schemas."""
-        if depth > 5:
+        # AUDIT1.MD Fix: Implement a robust $ref resolver for nested and multi-step Redfish schemas (both internal and external pointer types)
+        if depth > 8:
             return schema  # Prevent infinite recursive cycles
             
-        if isinstance(schema, dict):
-            # Resolve $ref first
-            if "$ref" in schema:
-                ref_path = schema["$ref"]
-                if ref_path.startswith("#/"):
-                    parts = ref_path.split("/")[1:]
-                    resolved = root_spec
-                    for part in parts:
-                        resolved = resolved.get(part, {})
-                    return self._resolve_refs(resolved, root_spec, depth + 1)
-                return schema
-                
+        root_dir = self.file_path.parent
+        resolved = resolve_refs(schema, root_spec, root_dir=root_dir)
+        
+        if isinstance(resolved, dict):
             resolved_dict = {}
-            for k, v in schema.items():
+            for k, v in resolved.items():
                 if k in ["allOf", "oneOf", "anyOf"] and isinstance(v, list):
                     # Combine sub-schemas into the current dictionary
                     combined_props = {}
@@ -106,9 +147,9 @@ class OpenAPIParser:
                     resolved_dict[k] = self._resolve_refs(v, root_spec, depth)
             return resolved_dict
             
-        elif isinstance(schema, list):
-            return [self._resolve_refs(item, root_spec, depth) for item in schema]
-        return schema
+        elif isinstance(resolved, list):
+            return [self._resolve_refs(item, root_spec, depth) for item in resolved]
+        return resolved
 
     def parse_and_flatten(self) -> ContractA:
         """
@@ -124,8 +165,8 @@ class OpenAPIParser:
             if not isinstance(path_item, dict):
                 continue
 
-            # Resolve references in path item (e.g. parameter refs)
-            path_item = resolve_refs(path_item, spec)
+            # Resolve references in path item (e.g. parameter refs, both internal and external)
+            path_item = resolve_refs(path_item, spec, root_dir=self.file_path.parent)
             path_parameters = path_item.get("parameters", [])
 
             for method, operation in path_item.items():
@@ -138,7 +179,7 @@ class OpenAPIParser:
                     continue
                 
                 # Resolve entire operation to ensure parameters and requestBody are resolved
-                operation = resolve_refs(operation, spec)
+                operation = resolve_refs(operation, spec, root_dir=self.file_path.parent)
 
                 operation_params = operation.get("parameters", [])
 
