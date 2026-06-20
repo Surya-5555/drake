@@ -112,21 +112,35 @@ async def log_audit_event_async(
     actor: str = "system",
 ):
     import uuid
+    import hashlib
 
     async with aiosqlite.connect(DB_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT hash FROM audit_events ORDER BY rowid DESC LIMIT 1") as cursor:
+            row = await cursor.fetchone()
+            previous_hash = row["hash"] if row and row["hash"] else "GENESIS_HASH"
+            
+        event_id = str(uuid.uuid4())
+        timestamp = datetime.now(timezone.utc).isoformat()
+        payload_str = f"{event_id}{event_type}{status}{workflow_name}{description}{actor}{timestamp}None{previous_hash}"
+        new_hash = hashlib.sha256(payload_str.encode('utf-8')).hexdigest()
+
         await db.execute(
             """
-            INSERT INTO audit_events (id, event_type, status, workflow_name, description, actor, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO audit_events (id, event_type, status, workflow_name, description, actor, timestamp, metadata, previous_hash, hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                str(uuid.uuid4()),
+                event_id,
                 event_type,
                 status,
                 workflow_name,
                 description,
                 actor,
-                datetime.now(timezone.utc).isoformat(),
+                timestamp,
+                None,
+                previous_hash,
+                new_hash,
             ),
         )
         await db.commit()
@@ -258,8 +272,8 @@ async def approve_workflow(workflow_id: str) -> Dict[str, str]:
             raise HTTPException(status_code=404, detail="Workflow not found")
 
         await db.execute(
-            "UPDATE workflows SET approved = 1, rejection_reason = NULL WHERE id = ?",
-            (workflow_id,),
+            "UPDATE workflows SET approved = 1, rejection_reason = NULL, approved_by = ?, approved_at = ? WHERE id = ?",
+            ("admin", datetime.now(timezone.utc).isoformat(), workflow_id),
         )
         await db.commit()
 
