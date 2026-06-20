@@ -225,6 +225,109 @@ def init_db_sync() -> None:
             )
             """)
 
+        # 6. Capability registry
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS capability_registry (
+                operation_id TEXT PRIMARY KEY,
+                capability_name TEXT NOT NULL,
+                compatibility_domain TEXT NOT NULL,
+                default_risk_level TEXT NOT NULL,
+                parameters_schema TEXT,
+                risk_profile_id TEXT,
+                is_manual_override INTEGER DEFAULT 0,
+                discovery_confidence REAL DEFAULT 1.0
+            )
+            """)
+
+        # 7. Compatibility rules
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS compatibility_rules (
+                id TEXT PRIMARY KEY,
+                rule_name TEXT NOT NULL,
+                rule_type TEXT NOT NULL,
+                domain TEXT NOT NULL,
+                rule_version INTEGER NOT NULL,
+                effective_from TEXT NOT NULL,
+                effective_to TEXT,
+                created_by TEXT NOT NULL,
+                superseded_by TEXT,
+                change_reason TEXT,
+                rule_config TEXT
+            )
+            """)
+
+        # 8. Compatibility dependencies links
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS compatibility_dependencies (
+                rule_id TEXT NOT NULL,
+                prerequisite_rule_id TEXT NOT NULL,
+                PRIMARY KEY (rule_id, prerequisite_rule_id),
+                FOREIGN KEY (rule_id) REFERENCES compatibility_rules(id) ON DELETE CASCADE,
+                FOREIGN KEY (prerequisite_rule_id) REFERENCES compatibility_rules(id) ON DELETE CASCADE
+            )
+            """)
+
+        # 9. Device inventory (Stateful Facts cache)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS device_inventory (
+                id TEXT PRIMARY KEY,
+                target_ip TEXT UNIQUE NOT NULL,
+                device_model TEXT NOT NULL,
+                bios_version TEXT NOT NULL,
+                lifecycle_controller_version TEXT,
+                firmware_inventory TEXT,
+                last_scanned TEXT NOT NULL
+            )
+            """)
+
+        # 10. Compatibility execution reports
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS compatibility_reports (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL,
+                target_ip TEXT NOT NULL,
+                status TEXT NOT NULL,
+                compatibility_score INTEGER NOT NULL,
+                risk_score INTEGER NOT NULL,
+                report_json TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+            )
+            """)
+
+        # 11. Risk profiles
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS risk_profiles (
+                id TEXT PRIMARY KEY,
+                profile_name TEXT NOT NULL,
+                base_risk_level TEXT NOT NULL,
+                method_adjustments TEXT,
+                order_coefficient REAL NOT NULL,
+                max_risk_score INTEGER NOT NULL
+            )
+            """)
+
+        # 12. Create temporal rules index
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_rules_temporal
+            ON compatibility_rules(effective_from, effective_to)
+            """)
+
+        # Seed default risk profiles if they don't exist
+        default_profiles = [
+            ("default_read_only", "Default Read-Only", "READ_ONLY", "{}", 0.0, 100),
+            ("default_config_change", "Default Config Change", "CONFIG_CHANGE", '{"POST": 5, "PUT": 10, "PATCH": 5}', 1.0, 100),
+            ("default_destructive", "Default Destructive", "DESTRUCTIVE", '{"POST": 10, "PUT": 15, "DELETE": 20}', 2.0, 100)
+        ]
+        for p_id, name, risk, adjustments, coeff, max_score in default_profiles:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO risk_profiles (id, profile_name, base_risk_level, method_adjustments, order_coefficient, max_risk_score)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (p_id, name, risk, adjustments, coeff, max_score)
+            )
+
         # Populate default statuses if empty
         for stage in [
             "ingestionStatus",
@@ -237,6 +340,8 @@ def init_db_sync() -> None:
                 (stage, "idle"),
             )
         conn.commit()
+
+
 
 
 def set_pipeline_status(stage: str, status: str) -> None:
@@ -650,6 +755,78 @@ class EndpointStep(Base):
     created_at = Column(String, nullable=False)
 
     workflow = relationship("Workflow", back_populates="steps")
+
+
+class CapabilityRegistry(Base):
+    __tablename__ = "capability_registry"
+
+    operation_id = Column(String, primary_key=True)
+    capability_name = Column(String, nullable=False)
+    compatibility_domain = Column(String, nullable=False)
+    default_risk_level = Column(String, nullable=False)
+    parameters_schema = Column(String)
+    risk_profile_id = Column(String)
+    is_manual_override = Column(Integer, default=0)
+    discovery_confidence = Column(Float, default=1.0)
+
+
+class CompatibilityRule(Base):
+    __tablename__ = "compatibility_rules"
+
+    id = Column(String, primary_key=True)
+    rule_name = Column(String, nullable=False)
+    rule_type = Column(String, nullable=False)
+    domain = Column(String, nullable=False)
+    rule_version = Column(Integer, nullable=False)
+    effective_from = Column(String, nullable=False)
+    effective_to = Column(String)
+    created_by = Column(String, nullable=False)
+    superseded_by = Column(String)
+    change_reason = Column(String)
+    rule_config = Column(String)
+
+
+class CompatibilityDependency(Base):
+    __tablename__ = "compatibility_dependencies"
+
+    rule_id = Column(String, primary_key=True)
+    prerequisite_rule_id = Column(String, primary_key=True)
+
+
+class DeviceInventory(Base):
+    __tablename__ = "device_inventory"
+
+    id = Column(String, primary_key=True)
+    target_ip = Column(String, unique=True, nullable=False)
+    device_model = Column(String, nullable=False)
+    bios_version = Column(String, nullable=False)
+    lifecycle_controller_version = Column(String)
+    firmware_inventory = Column(String)
+    last_scanned = Column(String, nullable=False)
+
+
+class CompatibilityReport(Base):
+    __tablename__ = "compatibility_reports"
+
+    id = Column(String, primary_key=True)
+    workflow_id = Column(String, nullable=False)
+    target_ip = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    compatibility_score = Column(Integer, nullable=False)
+    risk_score = Column(Integer, nullable=False)
+    report_json = Column(String, nullable=False)
+    timestamp = Column(String, nullable=False)
+
+
+class RiskProfile(Base):
+    __tablename__ = "risk_profiles"
+
+    id = Column(String, primary_key=True)
+    profile_name = Column(String, nullable=False)
+    base_risk_level = Column(String, nullable=False)
+    method_adjustments = Column(String)
+    order_coefficient = Column(Float, nullable=False)
+    max_risk_score = Column(Integer, nullable=False)
 
 
 async def init_db() -> None:
