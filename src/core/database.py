@@ -589,8 +589,18 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
                 "SELECT * FROM endpoints WHERE community_id = ? ORDER BY operation_id",
                 (comm_id,),
             )
-            eps = cursor.fetchall()
-            for i, ep in enumerate(eps):
+            raw_eps = cursor.fetchall()
+            ep_dicts = [dict(row) for row in raw_eps]
+            
+            # Phase 2: DAG Topological Sorting
+            try:
+                from src.ai_clustering.dependency_matcher import build_execution_dag
+                sorted_eps = build_execution_dag(ep_dicts)
+            except Exception as e:
+                print(f"DAG sorting failed, falling back to basic ordering: {e}")
+                sorted_eps = ep_dicts
+
+            for i, ep in enumerate(sorted_eps):
                 conn.execute(
                     """
                     INSERT INTO endpoint_steps (workflow_id, step_order, operation_id, method, url, required_params, request_schema, response_schema, created_at)
@@ -603,8 +613,8 @@ def save_workflows(workflows_list: List[Dict[str, Any]]) -> None:
                         ep["method"],
                         ep["url"],
                         ep["required_params"],
-                        None,
-                        None,
+                        ep.get("request_schema"),
+                        ep.get("response_schema"),
                         datetime.now(timezone.utc).isoformat(),
                     ),
                 )
@@ -625,29 +635,32 @@ def get_workflows(
         wf_result = conn.execute(text(query))
         workflows = [dict(row) for row in wf_result.mappings()]
 
-        # Map endpoints to their workflows by community_id
-        ep_result = conn.execute(text("SELECT * FROM endpoints"))
-        endpoints = [dict(row) for row in ep_result.mappings()]
+        # Map steps to their workflows by workflow_id, ordered by step_order
+        steps_result = conn.execute(text("SELECT * FROM endpoint_steps ORDER BY workflow_id, step_order"))
+        steps = [dict(row) for row in steps_result.mappings()]
 
         from collections import defaultdict
 
-        community_to_endpoints = defaultdict(list)
-        for ep in endpoints:
-            if ep["community_id"]:
-                community_to_endpoints[ep["community_id"]].append(
-                    {
-                        "operationId": ep["operation_id"],
-                        "method": ep["method"],
-                        "url": ep["url"],
-                        "path": ep["url"],
-                    }
-                )
+        workflow_to_steps = defaultdict(list)
+        for step in steps:
+            workflow_to_steps[step["workflow_id"]].append(
+                {
+                    "operationId": step["operation_id"],
+                    "method": step["method"],
+                    "url": step["url"],
+                    "path": step["url"],
+                }
+            )
+
+        # Fallback to endpoints for direct match if steps missing
+        ep_result = conn.execute(text("SELECT * FROM endpoints"))
+        endpoints = [dict(row) for row in ep_result.mappings()]
 
         results = []
         for wf in workflows:
             wf_id = wf["id"]
             comm_id = wf["community_id"] or wf_id
-            underlying = community_to_endpoints[comm_id]
+            underlying = workflow_to_steps.get(wf_id, [])
 
             # In case some nodes were direct mapping or Leiden generated empty groups, default to itself
             if not underlying:

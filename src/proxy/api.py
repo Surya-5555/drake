@@ -796,8 +796,8 @@ async def sync_workflow_mappings_async() -> None:
             for wf in approved_wfs:
                 name = wf["system_name"]
                 async with db.execute(
-                    "SELECT * FROM endpoints WHERE community_id = ? ORDER BY operation_id",
-                    (wf["community_id"],),
+                    "SELECT * FROM endpoint_steps WHERE workflow_id = ? ORDER BY step_order",
+                    (wf["id"],),
                 ) as c:
                     eps = await c.fetchall()
 
