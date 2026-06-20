@@ -131,9 +131,9 @@ async def load_approved_tools_from_db() -> None:
                 try:
                     if step.request_schema:
                         schema = json.loads(step.request_schema)
-                        schemas_doc.append(f"
+                        schemas_doc.append(f"""
 Step {step.step_order} ({step.method} {step.url}) Body Schema:
-{json.dumps(schema, indent=2)}")
+{json.dumps(schema, indent=2)}""")
                         # Extract top-level properties from schema and add to parameters
                         if schema.get("type") == "object" and "properties" in schema:
                             for prop, details in schema["properties"].items():
@@ -145,11 +145,7 @@ Step {step.step_order} ({step.method} {step.url}) Body Schema:
             # Extend description with body schemas
             desc = wf.generated_description or f"Execute clustered workflow for {name}"
             if schemas_doc:
-                desc += "
-
-### Required Request Body Structures:
-" + "
-".join(schemas_doc)
+                desc += "\n\n### Required Request Body Structures:\n" + "\n".join(schemas_doc)
 
             # Use inspect.Signature to create dynamic kwargs
             import inspect
