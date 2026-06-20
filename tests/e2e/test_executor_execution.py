@@ -83,11 +83,19 @@ async def test_mock_httpx_executor_success(mock_async_client, mock_async_session
     assert result["step_results"][1]["method"] == "POST"
 
     # Verify requests were called correctly
-    # GET shouldn't have JSON body
+    # GET should have query param 'force'
     mock_client_instance.request.assert_any_call(
-        "GET", "http://fake/systems/sys123", timeout=5.0
+        "GET",
+        "http://fake/systems/sys123",
+        timeout=10.0,
+        headers={"Authorization": "Basic mock-offline-token"},
+        params={"force": "true"},
     )
     # POST should have remaining param 'force' in JSON body
     mock_client_instance.request.assert_any_call(
-        "POST", "http://fake/systems/sys123/reset", timeout=5.0, json={"force": "true"}
+        "POST",
+        "http://fake/systems/sys123/reset",
+        timeout=10.0,
+        json={"force": "true"},
+        headers={"Authorization": "Basic mock-offline-token"},
     )
