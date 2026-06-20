@@ -49,10 +49,46 @@ def set_sqlite_pragma_sync(dbapi_connection, connection_record):
 
 def get_db_connection():
     """Create a raw connection to the SQLite database via SQLAlchemy engine to share locking."""
-    # We return a raw connection since legacy code relies on it
-    conn = sync_engine.raw_connection()
-    conn.row_factory = sqlite3.Row
-    return conn
+    import os
+
+    def clear_wal_shm():
+        for ext in ["-wal", "-shm"]:
+            f = DB_FILE.parent / f"{DB_FILE.name}{ext}"
+            if f.exists():
+                try:
+                    os.remove(f)
+                except Exception:
+                    pass
+
+    try:
+        conn = sync_engine.raw_connection()
+        conn.row_factory = sqlite3.Row
+        # Perform a quick integrity check to catch corruption/WAL mismatch early
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA quick_check(1);")
+        cursor.close()
+        return conn
+    except Exception as e:
+        err_msg = str(e).lower()
+        if "malformed" in err_msg or "corrupt" in err_msg:
+            clear_wal_shm()
+            try:
+                conn = sync_engine.raw_connection()
+                conn.row_factory = sqlite3.Row
+                return conn
+            except Exception:
+                # If still malformed, the main db file itself is corrupt.
+                # Delete the main db file to allow automatic schema regeneration.
+                if DB_FILE.exists():
+                    try:
+                        os.remove(DB_FILE)
+                    except Exception:
+                        pass
+                conn = sync_engine.raw_connection()
+                conn.row_factory = sqlite3.Row
+                return conn
+        raise e
+
 
 
 def init_db_sync() -> None:
