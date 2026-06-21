@@ -19,14 +19,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 
-from src.core.database import (
-    get_all_endpoints,
-    get_db_connection,
-    get_pipeline_statuses,
-    get_workflows,
-    log_audit_event,
-    set_pipeline_status,
-)
 
 logger = logging.getLogger("dell_mcp_api")
 
@@ -46,17 +38,13 @@ app.add_middleware(
 )
 
 
-import json
 import logging
 import os
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, status, Depends, Security, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
-from pydantic import BaseModel
 import aiosqlite
 
 from src.core.database import DB_FILE

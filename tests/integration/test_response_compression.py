@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_odata_removed(compression_engine, large_redfish_json):

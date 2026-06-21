@@ -10,7 +10,7 @@ from typing import Any, Dict, Set
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastmcp import FastMCP
 from mcp.server.session import ServerSession
 from sqlalchemy.future import select
@@ -21,13 +21,7 @@ from src.core.database import (
     init_db,
     init_db_sync,
     Workflow,
-    EndpointStep,
     ExecutionHistory,
-)
-from src.proxy.executors import (
-    BaseExecutor,
-    DellOMSDKExecutor,
-    MockHTTPXExecutor,
 )
 
 # Load environment variables
@@ -124,9 +118,6 @@ async def load_approved_tools_from_db() -> None:
     iterates through them, and registers them dynamically using mcp.add_tool().
     """
     import json
-    from pydantic import create_model, Field
-    from src.proxy.executors.httpx_executor import PrismExecutor, MockExecutor
-    from src.proxy.executors.dell_omsdk_executor import DellOMSDKExecutor
 
     async with async_session() as session:
         result = await session.execute(
@@ -176,8 +167,18 @@ async def load_approved_tools_from_db() -> None:
                 except Exception:
                     pass
 
-            # Extend description with body schemas
-            desc = wf.generated_description or f"Execute clustered workflow for {name}"
+            # AUDIT1.MD Fix: Multi-step orchestration instructions and causal chain documentation for LLM
+            orchestration_doc = ""
+            if len(wf.steps) > 1:
+                orchestration_doc = "This workflow executes multiple steps. "
+                for idx in range(len(wf.steps) - 1):
+                    orchestration_doc += f"Step {idx + 1} returns {{{{job_id}}}}. You must pass {{{{job_id}}}} into Step {idx + 2}. "
+                orchestration_doc += f"Available input parameters: {list(all_params.keys())}."
+            else:
+                orchestration_doc = f"This workflow executes a single step. Available input parameters: {list(all_params.keys())}."
+
+            # Extend description with body schemas and orchestration instructions
+            desc = orchestration_doc + "\n\n" + (wf.generated_description or f"Execute clustered workflow for {name}")
             if schemas_doc:
                 desc += "\n\n### Required Request Body Structures:\n" + "\n".join(schemas_doc)
 

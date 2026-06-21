@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime
 
@@ -894,7 +894,6 @@ async def sync_governance_to_mcp_proxy() -> None:
       - 1 -> approved
       - 2 -> rejected
     """
-    import sqlite3
     from sqlalchemy.future import select
     from sqlalchemy.orm import selectinload
 

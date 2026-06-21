@@ -2,7 +2,7 @@
 name = "dell-mcp"
 version = "0.1.0"
 description = "Dell Enterprise MCP Workflow Proxy"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "fastmcp>=3.4.2",
     "httpx>=0.28.1",
@@ -20,7 +20,12 @@ dependencies = [
     "tenacity>=9.1.4",
     "sqlalchemy>=2.0.51",
     "aiosqlite>=0.22.1",
+    "PyYAML>=6.0.1",
+    "mcp>=0.1.0",
 ]
+
+[project.scripts]
+dell-mcp = "src.cli.main:main"
 
 [dependency-groups]
 dev = [
@@ -45,3 +50,12 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from src.core.database import engine, get_db_connection
+from src.core.database import engine
 from sqlalchemy import text
 
 logging.basicConfig(level=logging.INFO)

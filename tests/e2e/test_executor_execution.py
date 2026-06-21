@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from src.proxy.executors.httpx_executor import MockHTTPXExecutor
 from src.core.database import Workflow, EndpointStep
-from src.core.exceptions import DellProxyExecutionError
 
 
 @pytest.mark.anyio

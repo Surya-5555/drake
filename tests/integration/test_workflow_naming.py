@@ -1,4 +1,3 @@
-import pytest
 from src.ai_clustering.workflow_naming import generate_system_name
 
 def test_generate_system_name_from_tags():

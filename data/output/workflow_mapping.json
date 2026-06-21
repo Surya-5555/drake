@@ -1420,7 +1420,7 @@
       "steps": [
         {
           "step_id": 1,
-          "name": "GET_/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFC/{FCId}",
+          "name": "GetSystem",
           "method": "GET",
           "url": "/redfish/v1/Chassis/{ComputerSystemId}/NetworkAdapters/{NetworkId}/NetworkDeviceFunctions/Oem/Dell/DellFC/{FCId}",
           "params": {}
