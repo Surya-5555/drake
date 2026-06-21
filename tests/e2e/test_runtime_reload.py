@@ -1,4 +1,3 @@
-import pytest
 import os
 from fastapi.testclient import TestClient
 from src.proxy.api import app

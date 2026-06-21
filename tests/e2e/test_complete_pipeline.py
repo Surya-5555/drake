@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_complete_system_pipeline(

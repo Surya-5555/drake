@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SystemConfiguration Model="PowerEdge" ServiceTag="MOCKTAG" Created="2026-06-20T19:40:30.708923+00:00">
+  <Component FQDD="iDRAC.Embedded.1">
+    <Attribute Name="IPMILan.1#Enable">Enabled</Attribute>
+  </Component>
+  <Component FQDD="BIOS.Setup.1-1">
+    <Attribute Name="LogicalProc">Enabled</Attribute>
+  </Component>
+</SystemConfiguration>

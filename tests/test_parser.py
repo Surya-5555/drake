@@ -4,9 +4,7 @@ Dell MCP — Phase 1 Parser: Full Test Suite
 Tests for the OpenAPIParser class.
 """
 
-import json
 from pathlib import Path
-from typing import Any
 import pytest
 
 from src.core.models import ContractA, EndpointContract

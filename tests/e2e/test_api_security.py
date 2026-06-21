@@ -1,4 +1,3 @@
-import pytest
 from fastapi.testclient import TestClient
 from src.proxy.api import app
 from src.core.database import init_db_sync

@@ -1,8 +1,6 @@
 import pytest
 import sqlite3
-from src.core.database import DB_FILE, init_db_sync, save_workflows, save_endpoints
-import asyncio
-from unittest.mock import patch, MagicMock
+from src.core.database import DB_FILE, init_db_sync, save_workflows
 
 
 @pytest.fixture

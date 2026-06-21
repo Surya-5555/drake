@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from src.core.database import async_session, init_db, Workflow, EndpointStep
-from src.proxy.server import extract_placeholders_from_steps, execute_workflow_route
+from src.proxy.server import extract_placeholders_from_steps
 from src.proxy.executors.httpx_executor import MockHTTPXExecutor
 
 
@@ -78,7 +78,7 @@ async def main():
 
     # 5. Tool invocation reaches executor
     # We simulate tool invocation which calls the execute_workflow_route/executor
-    print(f"5. Tool mapped to executor. Ready to invoke.")
+    print("5. Tool mapped to executor. Ready to invoke.")
 
     # Run the executor manually (this exercises steps 5, 6, 7, 8, 9)
     # Note: we need a mock HTTP server or httpx patch if we don't have a real prism server running.
@@ -132,7 +132,7 @@ async def main():
         print(f"- workflow_id: {workflow_id}")
         print(f"- tool name: {wf_name}")
         print(f"- endpoint_steps count: {len(target_wf.steps)}")
-        print(f"- generated URLs:")
+        print("- generated URLs:")
         for call in calls:
             print(f"    {call[0][0]} {call[0][1]}")
         print(f"- final response object:\n{json.dumps(response, indent=2)}")

@@ -1,4 +1,6 @@
-import os, json, yaml
+import os
+import json
+import yaml
 from pathlib import Path
 
 def analyze_openapi_files():
@@ -34,7 +36,7 @@ def analyze_openapi_files():
                         'paths': num_paths,
                         'ops': num_ops
                     })
-            except Exception as e:
+            except Exception:
                 pass
     
     for r in results:

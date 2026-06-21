@@ -110,8 +110,15 @@ async def mock_api_client() -> AsyncGenerator[httpx.AsyncClient, None]:
     """
     Async fixture to test HTTPX calls against the local Stoplight Prism mock server.
     """
-    async with httpx.AsyncClient(base_url="http://localhost:4010") as client:
+    client = httpx.AsyncClient(base_url="http://localhost:4010")
+    try:
         yield client
+    finally:
+        try:
+            await client.aclose()
+        except RuntimeError as e:
+            if "Event loop is closed" not in str(e):
+                raise
 
 
 import pytest

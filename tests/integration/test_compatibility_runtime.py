@@ -5,13 +5,11 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock, MagicMock
 
 from src.core.database import (
-    DB_FILE,
     get_db_connection,
     init_db_sync,
     save_endpoints,
     save_workflows,
     async_session,
-    Workflow,
     EndpointStep
 )
 from src.proxy.api import app

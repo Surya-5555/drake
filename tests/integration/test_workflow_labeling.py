@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_every_workflow_receives_name(labeling_pipeline):

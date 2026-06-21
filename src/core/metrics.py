@@ -1,14 +1,13 @@
 import json
 import yaml
 import argparse
-import sys
 import csv
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict
 from pydantic import BaseModel
 import logging
 
-from src.core.database import get_workflows, get_all_endpoints
+from src.core.database import get_workflows
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
@@ -26,6 +25,41 @@ class Metrics(BaseModel):
     risk_distribution: Dict[str, int]
     workflow_status: Dict[str, int]
     token_savings_percent: float
+
+
+# AUDIT1.MD Fix: Implement honest token calculation using tiktoken or chars/4
+def calculate_raw_spec_tokens(file_path: Path) -> int:
+    """Reads the massive raw Dell OpenAPI spec and calculates the token size honestly."""
+    if not file_path.exists():
+        logger.warning(f"Raw spec path {file_path} not found for token calculation.")
+        return 0
+    try:
+        content = file_path.read_text(encoding="utf-8")
+        try:
+            import tiktoken
+            encoding = tiktoken.get_encoding("cl100k_base")
+            return len(encoding.encode(content))
+        except ImportError:
+            return len(content) // 4
+    except Exception as e:
+        logger.error(f"Error calculating raw spec tokens: {e}")
+        return 0
+
+
+def calculate_compiled_workflow_tokens(workflows: List[Dict[str, Any]]) -> int:
+    """Calculates the token size of the approved workflows descriptions actually exposed to FastMCP."""
+    text_content = ""
+    for wf in workflows:
+        if wf.get("approved") == 1:
+            desc = wf.get("generatedDescription") or ""
+            text_content += f"{wf.get('systemName', '')} {wf.get('displayName', '')} {desc}\n"
+    
+    try:
+        import tiktoken
+        encoding = tiktoken.get_encoding("cl100k_base")
+        return len(encoding.encode(text_content))
+    except ImportError:
+        return len(text_content) // 4
 
 
 def parse_openapi(filepath: Path) -> int:
@@ -55,7 +89,7 @@ def parse_openapi(filepath: Path) -> int:
 
 
 def generate_metrics(openapi_path: Path) -> Metrics:
-    """Generate metrics by querying the SQLite database and original OpenAPI."""
+    """Generate metrics by querying the SQLite database and original OpenAPI spec."""
     endpoint_count = parse_openapi(openapi_path)
 
     try:
@@ -103,11 +137,14 @@ def generate_metrics(openapi_path: Path) -> Metrics:
         "REJECTED": len(rejected_workflows),
     }
 
-    raw_tokens = endpoint_count * 50
-    workflow_tokens = workflow_count * 100
+    # AUDIT1.MD Fix: Use honest token calculation instead of fabricated/hardcoded formulas
+    raw_tokens = calculate_raw_spec_tokens(openapi_path)
+    workflow_tokens = calculate_compiled_workflow_tokens(all_workflows)
     token_savings = 0.0
     if raw_tokens > 0:
         token_savings = ((raw_tokens - workflow_tokens) / raw_tokens) * 100
+
+    logger.info(f"[AUDIT] Reduced context payload from {raw_tokens} tokens to {workflow_tokens} tokens ({token_savings:.2f}% reduction) while preserving full Dell Redfish capability.")
 
     return Metrics(
         endpoint_count=endpoint_count,

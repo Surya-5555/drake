@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import datetime
 import logging
-import os
 from pathlib import Path
 from typing import Any, Dict
 
@@ -141,9 +140,84 @@ class WorkflowExecutionService:
             logger.info(f"Recorded execution ledger entry (ID: {history_id}, status: running)")
 
         # 4. Execute the actual workflow steps
+        is_failed = False
+        result = None
+        error = None
         try:
             result = await self.executor.execute_workflow(workflow_name, params)
             status = result.get("status") or "success"
+            if status not in ["success", "completed"]:
+                is_failed = True
+        except Exception as err:
+            is_failed = True
+            error = err
+            status = "failed"
+
+        if is_failed:
+            logger.error(f"Workflow execution failed. Status: {status}. Error: {error}")
+            
+            # Execute state-aware rollback automatically if supported
+            if rollback_strategy in ["DUAL_BANK", "SCP_SNAPSHOT"]:
+                logger.info(f"Triggering automatic rollback for workflow '{workflow_name}' using strategy '{rollback_strategy}'")
+                
+                # Determine base URL for HTTPExecutor requests
+                base_url = "http://localhost:4010"
+                headers = {}
+                if hasattr(self.executor, "base_url"):
+                    base_url = self.executor.base_url
+                elif hasattr(self.executor, "target_ip"):
+                    base_url = f"https://{self.executor.target_ip}"
+                else:
+                    base_url = f"https://{target_server_ip}"
+
+                if hasattr(self.executor, "session_headers"):
+                    headers = self.executor.session_headers
+
+                rollback_status = "failed"
+                try:
+                    if rollback_strategy == "DUAL_BANK":
+                        target_url = f"{base_url.rstrip('/')}/redfish/v1/UpdateService/Actions/Oem/DellUpdateService.SwitchActiveFirmwarePartition"
+                        logger.info(f"Auto-rollback: swapping active firmware partition on {target_server_ip} via {target_url}...")
+                        async with httpx.AsyncClient() as client:
+                            response = await client.post(target_url, json={}, headers=headers, timeout=10.0)
+                            logger.info(f"Auto-rollback: DUAL_BANK partition swap completed with status: {response.status_code}")
+                            if response.status_code < 400:
+                                rollback_status = "rolled_back"
+                    elif rollback_strategy == "SCP_SNAPSHOT" and snapshot_path:
+                        p = Path(snapshot_path)
+                        if p.exists():
+                            xml_content = p.read_text(encoding="utf-8")
+                            target_url = f"{base_url.rstrip('/')}/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.ImportSystemConfiguration"
+                            payload = {
+                                "ImportBuffer": xml_content,
+                                "ShareParameters": {"Target": "Local"},
+                                "ShutdownType": "Graceful",
+                            }
+                            logger.info(f"Auto-rollback: importing configuration snapshot from '{snapshot_path}' via {target_url}...")
+                            async with httpx.AsyncClient() as client:
+                                response = await client.post(target_url, json=payload, headers=headers, timeout=10.0)
+                                logger.info(f"Auto-rollback: SCP snapshot import completed with status: {response.status_code}")
+                                if response.status_code < 400:
+                                    rollback_status = "rolled_back"
+                        else:
+                            logger.warning(f"Auto-rollback failed: snapshot file '{snapshot_path}' does not exist on disk.")
+                except Exception as rbe:
+                    logger.error(f"Auto-rollback execution failed: {rbe}")
+
+                # Log to audit log ledger
+                try:
+                    from src.core.database import log_audit_event
+                    log_audit_event(
+                        event_type="AUTO_ROLLBACK_TRIGGERED",
+                        status=rollback_status,
+                        description=f"Auto-rollback triggered for workflow '{workflow_name}' on {target_server_ip} (strategy: {rollback_strategy}). Outcome: {rollback_status}.",
+                        workflow_name=workflow_name,
+                        actor="system",
+                    )
+                except Exception as ae:
+                    logger.warning(f"Failed to log auto-rollback audit event: {ae}")
+
+                status = rollback_status
 
             # Update status in the ledger
             async with self.session_maker() as session:
@@ -151,16 +225,19 @@ class WorkflowExecutionService:
                 if entry:
                     entry.status = status
                     await session.commit()
-                    logger.info(f"Ledger entry {history_id} updated with status: {status}")
+                    logger.info(f"Ledger entry {history_id} marked as: {status}")
 
-            return result
-        except Exception as err:
-            logger.error(f"Error during workflow execution: {err}")
-            # Update status to failed in the ledger
-            async with self.session_maker() as session:
-                entry = await session.get(ExecutionHistory, history_id)
-                if entry:
-                    entry.status = "failed"
-                    await session.commit()
-                    logger.info(f"Ledger entry {history_id} marked as failed.")
-            raise err
+            if error:
+                raise error
+            return result or {"status": status, "error": "workflow failed but was processed by rollback"}
+
+        # Success path
+        async with self.session_maker() as session:
+            entry = await session.get(ExecutionHistory, history_id)
+            if entry:
+                entry.status = status
+                await session.commit()
+                logger.info(f"Ledger entry {history_id} updated with status: {status}")
+
+        return result
+

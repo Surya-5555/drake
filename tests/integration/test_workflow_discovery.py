@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_workflow_discovery_completes(workflow_pipeline):
